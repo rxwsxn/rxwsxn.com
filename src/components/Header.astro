@@ -1,0 +1,32 @@
+---
+import { SITE } from '../site.config';
+
+const path = Astro.url.pathname;
+const nav = [
+  { href: '/', label: 'home' },
+  { href: '/work', label: 'work' },
+  { href: '/blog', label: 'blog' },
+  { href: '/now', label: 'now' },
+  { href: '/about', label: 'about' },
+  { href: '/contact', label: 'contact' },
+];
+
+const isCurrent = (href: string) =>
+  href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
+---
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <a class="wordmark" href="/">{SITE.wordmark}</a>
+      <span class="tagline">{SITE.tagline}</span>
+    </div>
+    <nav class="nav" aria-label="primary">
+      {nav.map((item) => (
+        <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
+          [{item.label}]
+        </a>
+      ))}
+    </nav>
+  </div>
+</header>

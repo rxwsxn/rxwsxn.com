@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rxwsxn.com/sitemap-index.xml

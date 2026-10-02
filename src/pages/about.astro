@@ -1,0 +1,54 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../site.config';
+---
+
+<Base title="about" description={`About ${SITE.name} — ai + product, ${SITE.location}.`}>
+  <div class="page-head wrap">
+    <h1>about</h1>
+    <p class="sub">the longer version.</p>
+  </div>
+
+  <section class="section wrap">
+    <div class="prose">
+      <p>
+        I'm {SITE.name}, an engineer working across <strong>ai</strong> and
+        <strong>product</strong>. The short version of the job: figure out what's
+        worth building, build it, and ship it — usually somewhere in the messy
+        middle where a model's behaviour and a user's expectations meet.
+      </p>
+
+      <p>
+        Most of my day is product work with a strong engineering bias: turning a
+        vague "we should use ai here" into something with a defined input, a
+        measurable output, and a feedback loop that keeps it honest. That means a
+        lot of prototyping, a lot of evaluation, and a willingness to throw away
+        the first three attempts.
+      </p>
+
+      <h2>how i work</h2>
+
+      <p>
+        I like small surfaces and fast loops. A rough thing in front of a real
+        user beats a polished thing in a doc. I write things down — this site is
+        part of that habit — because the notes are usually where the next idea
+        comes from.
+      </p>
+
+      <p>
+        On the tools side: TypeScript and Python most days, a static site when a
+        static site will do, and as little client-side machinery as I can get
+        away with.
+      </p>
+
+      <h2>elsewhere</h2>
+
+      <p>
+        Based in {SITE.location}. You can find code on
+        <a href={SITE.github}>GitHub</a>, and the fastest way to reach me is
+        <a href={`mailto:${SITE.email}`}>email</a>. For the snapshot of what I'm
+        doing right now, see <a href="/now">/now</a>.
+      </p>
+    </div>
+  </section>
+</Base>

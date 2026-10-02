@@ -1,0 +1,26 @@
+---
+import { SITE } from '../site.config';
+---
+
+<span class="copy-row">
+  <a class="contact-val" href={`mailto:${SITE.email}`}>{SITE.email}</a>
+  <button class="btn" type="button" data-copy={SITE.email}>copy</button>
+</span>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const value = btn.getAttribute('data-copy') || '';
+      const original = btn.textContent;
+      try {
+        await navigator.clipboard.writeText(value);
+        btn.textContent = 'copied';
+      } catch {
+        btn.textContent = 'select + copy';
+      }
+      window.setTimeout(() => {
+        btn.textContent = original;
+      }, 1400);
+    });
+  });
+</script>
