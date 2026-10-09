@@ -1,0 +1,84 @@
+---
+/**
+ * Generative interference lattice — a pixel grid whose brightness follows three
+ * summed sine waves, so it drifts like an interference pattern.
+ * Lives on /about now; drop it anywhere with <Lattice />.
+ */
+---
+
+<canvas id="field" aria-hidden="true"></canvas>
+
+<script>
+  (() => {
+    const c = document.getElementById('field');
+    if (!(c instanceof HTMLCanvasElement)) return;
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const cell = 9;
+    let W = 0;
+    let H = 0;
+
+    function resize() {
+      const r = c.getBoundingClientRect();
+      W = Math.max(1, Math.floor(r.width));
+      H = Math.max(1, Math.floor(r.height));
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      c.width = W * dpr;
+      c.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function draw(t) {
+      ctx.clearRect(0, 0, W, H);
+      const cols = Math.ceil(W / cell);
+      const rows = Math.ceil(H / cell);
+      for (let i = 0; i < cols; i++) {
+        for (let j = 0; j < rows; j++) {
+          const v =
+            (Math.sin(i * 0.42 + t * 0.0011) +
+              Math.sin(j * 0.55 - t * 0.0009) +
+              Math.sin((i + j) * 0.22 + t * 0.0007)) /
+            3;
+          if (v <= 0.04) continue;
+          ctx.fillStyle = 'rgba(0,255,136,' + (v * 0.85).toFixed(3) + ')';
+          ctx.fillRect(i * cell + 1, j * cell + 1, cell - 2, cell - 2);
+        }
+      }
+    }
+
+    let raf = 0;
+    let running = false;
+    const t0 = performance.now();
+
+    function loop() {
+      draw(performance.now() - t0);
+      raf = requestAnimationFrame(loop);
+    }
+    function start() {
+      if (running) return;
+      running = true;
+      loop();
+    }
+    function stop() {
+      running = false;
+      cancelAnimationFrame(raf);
+    }
+
+    resize();
+    draw(0);
+
+    if (!reduce) {
+      const io = new IntersectionObserver(
+        (entries) => entries.forEach((e) => (e.isIntersecting ? start() : stop())),
+        { threshold: 0.05 },
+      );
+      io.observe(c);
+      window.addEventListener('resize', () => {
+        resize();
+        if (!running) draw(0);
+      });
+    }
+  })();
+</script>

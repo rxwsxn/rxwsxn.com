@@ -1,21 +1,16 @@
 ---
 import { SITE } from '../site.config';
+import VisitorCounter from './VisitorCounter.astro';
 
 const year = new Date().getFullYear();
-const links = [
-  { label: 'source', href: SITE.github },
-  { label: 'rss', href: '/rss.xml' },
-  ...SITE.links.filter((l) => l.label !== 'github'),
-];
 ---
 
 <footer class="site-footer">
-  <div class="footer-inner">
-    <span>{SITE.footerNote} · © {year} {SITE.name}</span>
-    <span class="footer-links">
-      {links.map((l) => (
-        <a href={l.href}>{l.label}</a>
-      ))}
+  <div class="footer-inner footer-line">
+    <span class="footer-left">© {SITE.name} {year}</span>
+    <span class="footer-right">
+      <span class="live-dot" aria-hidden="true"></span>
+      <VisitorCounter />
     </span>
   </div>
 </footer>

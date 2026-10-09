@@ -1,29 +1,47 @@
 ---
+import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
+import Lattice from '../components/Lattice.astro';
 import { SITE } from '../site.config';
+
+const details = (await getCollection('work')).sort((a, b) => a.data.order - b.data.order);
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    url: new URL('/about/', Astro.site).href,
+    inLanguage: 'en',
+    mainEntity: { '@id': `${SITE.url}/#person` },
+  },
+];
 ---
 
-<Base title="about" description={`About ${SITE.name} — ai + product, ${SITE.location}.`}>
+<Base
+  title="about"
+  description={`${SITE.name} — AI + product engineer, ${SITE.location}.`}
+  image="/og/about.png"
+  jsonLd={jsonLd}
+>
   <div class="page-head wrap">
-    <h1>about</h1>
-    <p class="sub">the longer version.</p>
+    <h1>{SITE.name.toLowerCase()}</h1>
+    <p class="sub">{SITE.tagline} · {SITE.location}</p>
   </div>
 
   <section class="section wrap">
     <div class="prose">
       <p>
         I'm {SITE.name}, an engineer working across <strong>ai</strong> and
-        <strong>product</strong>. The short version of the job: figure out what's
-        worth building, build it, and ship it — usually somewhere in the messy
-        middle where a model's behaviour and a user's expectations meet.
+        <strong>product</strong>. The short version of the job: take a vague
+        "we should use ai here" and turn it into something with a defined input,
+        a measurable output, and a feedback loop that keeps it honest.
       </p>
 
       <p>
-        Most of my day is product work with a strong engineering bias: turning a
-        vague "we should use ai here" into something with a defined input, a
-        measurable output, and a feedback loop that keeps it honest. That means a
-        lot of prototyping, a lot of evaluation, and a willingness to throw away
-        the first three attempts.
+        Most of my work sits in the unglamorous middle of that: retrieval that
+        actually returns the right thing, evals that catch a regression before a
+        user does, prompts and pipelines that survive contact with real data.
+        The model is usually the easy part — the system around it is the job.
       </p>
 
       <h2>how i work</h2>
@@ -36,19 +54,86 @@ import { SITE } from '../site.config';
       </p>
 
       <p>
-        On the tools side: TypeScript and Python most days, a static site when a
+        On the tools side: Python and TypeScript most days, a static site when a
         static site will do, and as little client-side machinery as I can get
         away with.
       </p>
-
-      <h2>elsewhere</h2>
-
-      <p>
-        Based in {SITE.location}. You can find code on
-        <a href={SITE.github}>GitHub</a>, and the fastest way to reach me is
-        <a href={`mailto:${SITE.email}`}>email</a>. For the snapshot of what I'm
-        doing right now, see <a href="/now">/now</a>.
-      </p>
     </div>
+  </section>
+
+  <section class="section wrap">
+    <div class="sec-head">
+      <span class="label">figure</span>
+    </div>
+    <figure class="plate ticks">
+      <Lattice />
+      <figcaption>fig. — interference lattice</figcaption>
+    </figure>
+  </section>
+
+  <section class="section wrap">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <span class="label">details</span>
+    </div>
+    <p class="muted">things i've built and worked on.</p>
+    {
+      details.length > 0 ? (
+        <ul class="list">
+          {details.map((item) => (
+            <li>
+              <div class="work-head">
+                <span class="work-title">{item.data.title}</span>
+                {item.data.org && <span class="card-org">· {item.data.org}</span>}
+                {item.data.period && <span class="post-date">{item.data.period}</span>}
+              </div>
+              <p class="work-summary">{item.data.summary}</p>
+              {item.data.stack.length > 0 && (
+                <div class="work-meta">
+                  <span>{item.data.stack.join(' · ')}</span>
+                </div>
+              )}
+              {item.data.links.length > 0 && (
+                <div class="work-links">
+                  {item.data.links.map((l) => (
+                    <a href={l.href}>{l.label} ↗</a>
+                  ))}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="empty">nothing here yet.</p>
+      )
+    }
+  </section>
+
+  <section class="section wrap">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <span class="label">asides</span>
+    </div>
+    <div class="asides">
+      {
+        SITE.asides.map((a) => (
+          <div class="aside ticks">
+            <div class="aside-file">{a.file}</div>
+            <p>{a.text}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <span class="label">elsewhere</span>
+    </div>
+    <p class="muted">
+      based in {SITE.location}. code on <a href={SITE.github}>github</a>, the
+      fastest way to reach me is <a href={`mailto:${SITE.email}`}>email</a>.
+    </p>
   </section>
 </Base>

@@ -1,21 +1,39 @@
 ---
 import '../styles/global.css';
+import fs from 'node:fs';
 import { SITE } from '../site.config';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import Cursor from '../components/Cursor.astro';
 
 interface Props {
   title?: string;
   description?: string;
+  /** Path or absolute URL to the social card. Defaults to the site card. */
   image?: string;
+  imageAlt?: string;
   article?: boolean;
+  /** ISO date strings — emitted as article:published_time / article:modified_time. */
+  publishedTime?: string;
+  modifiedTime?: string;
+  tags?: string[];
+  /** Set true on pages that shouldn't be indexed (404, drafts). */
+  noindex?: boolean;
+  /** Extra schema.org blocks appended to the site graph. */
+  jsonLd?: Record<string, unknown>[];
 }
 
 const {
   title,
   description = SITE.description,
   image = '/og.png',
+  imageAlt,
   article = false,
+  publishedTime,
+  modifiedTime,
+  tags = [],
+  noindex = false,
+  jsonLd = [],
 } = Astro.props;
 
 const pageTitle = title
@@ -23,34 +41,103 @@ const pageTitle = title
   : `${SITE.wordmark} — ${SITE.tagline}`;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
-const ogImage = new URL(image, Astro.site).href;
+// fall back to the default card if a page's own card hasn't been generated
+const resolved = image.startsWith('/') && !fs.existsSync(`public${image}`) ? '/og.png' : image;
+const ogImage = new URL(resolved, Astro.site).href;
+const imageAltText = imageAlt ?? pageTitle;
+
+const sameAs = [
+  ...new Set([
+    SITE.github,
+    ...SITE.links.filter((l) => l.href.startsWith('http')).map((l) => l.href),
+  ]),
+];
+
+const siteGraph = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE.url}/#website`,
+      url: SITE.url,
+      name: SITE.wordmark,
+      description: SITE.description,
+      inLanguage: 'en',
+      publisher: { '@id': `${SITE.url}/#person` },
+    },
+    {
+      '@type': 'Person',
+      '@id': `${SITE.url}/#person`,
+      name: SITE.name,
+      url: SITE.url,
+      email: `mailto:${SITE.email}`,
+      jobTitle: SITE.jobTitle,
+      description: SITE.description,
+      sameAs,
+    },
+  ],
+};
+
+const blocks = [siteGraph, ...jsonLd];
 ---
 
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={canonical} />
+    {
+      noindex ? (
+        <meta name="robots" content="noindex, nofollow" />
+      ) : (
+        <meta name="robots" content="index, follow, max-image-preview:large" />
+      )
+    }
+    {!noindex && <link rel="canonical" href={canonical} />}
     <meta name="author" content={SITE.name} />
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#0a0a0a" />
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="alternate" type="application/rss+xml" title={`${SITE.wordmark} — rss`} href="/rss.xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="sitemap" type="application/xml" href="/sitemap-index.xml" />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={`${SITE.wordmark} — rss`}
+      href="/rss.xml"
+    />
 
     <meta property="og:type" content={article ? 'article' : 'website'} />
     <meta property="og:site_name" content={SITE.wordmark} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={SITE.locale} />
     <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={imageAltText} />
+
+    {article && publishedTime && <meta property="article:published_time" content={publishedTime} />}
+    {article && modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
+    {article && <meta property="article:author" content={SITE.name} />}
+    {article && tags.map((t) => <meta property="article:tag" content={t} />)}
 
     <meta name="twitter:card" content="summary_large_image" />
+    {SITE.twitter && <meta name="twitter:site" content={SITE.twitter} />}
+    {SITE.twitter && <meta name="twitter:creator" content={SITE.twitter} />}
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image:alt" content={imageAltText} />
+
+    {blocks.map((block) => (
+      <script type="application/ld+json" is:inline set:html={JSON.stringify(block)} />
+    ))}
   </head>
   <body>
     <a class="skip" href="#main">skip to content</a>
@@ -59,5 +146,6 @@ const ogImage = new URL(image, Astro.site).href;
       <slot />
     </main>
     <Footer />
+    <Cursor />
   </body>
 </html>

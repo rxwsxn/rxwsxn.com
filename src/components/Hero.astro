@@ -1,0 +1,37 @@
+---
+import { SITE } from '../site.config';
+import Lattice from './Lattice.astro';
+
+const words = [...SITE.heroWords];
+// duplicate the first word so the loop is seamless
+const track = [...words, words[0]];
+---
+
+<section class="hero2 wrap">
+  <span class="greet">{SITE.greeting}</span>
+
+  <h1 class="statement">
+    I build<br />
+    <span class="rotator" aria-label={words.join(', ')}>
+      <span class="rotator-track" aria-hidden="true">
+        {track.map((w) => <span>{w}</span>)}
+      </span>
+    </span>
+  </h1>
+
+  <p class="hero-sub">{SITE.heroSub}</p>
+
+  <figure class="plate plate--portrait ticks">
+    <Lattice />
+    <figcaption>fig. 01 — interference field</figcaption>
+  </figure>
+
+  <dl class="now-strip">
+    {SITE.now.map((row) => (
+      <div>
+        <dt>{row.k}</dt>
+        <dd>{row.v}</dd>
+      </div>
+    ))}
+  </dl>
+</section>

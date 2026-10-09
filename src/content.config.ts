@@ -13,27 +13,23 @@ const blog = defineCollection({
   }),
 });
 
+/**
+ * Work entries. These are no longer a standalone page — they render in the
+ * "details" section of /about.
+ */
 const work = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/work' }),
   schema: z.object({
     title: z.string(),
     summary: z.string(),
+    org: z.string().optional(),
+    period: z.string().optional(),
     stack: z.array(z.string()).default([]),
-    status: z.enum(['active', 'shipped', 'planned', 'paused', 'archived']).default('active'),
-    year: z.string().optional(),
-    group: z.string().default('projects'),
-    order: z.number().default(100),
     links: z
       .array(z.object({ label: z.string(), href: z.string() }))
       .default([]),
+    order: z.number().default(100),
   }),
 });
 
-const now = defineCollection({
-  loader: glob({ pattern: 'now.md', base: './src/content' }),
-  schema: z.object({
-    updated: z.coerce.date().optional(),
-  }),
-});
-
-export const collections = { blog, work, now };
+export const collections = { blog, work };

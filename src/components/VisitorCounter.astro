@@ -1,0 +1,33 @@
+---
+/**
+ * Visitor text — visitor number, masked IP and country — shown next to the
+ * footer's blinking dot. Backed by the Pages Function at /api/visit. If that
+ * isn't available (plain `astro dev`, or no KV binding yet) the span stays
+ * hidden rather than showing anything fake.
+ */
+---
+
+<span class="visits" id="visits" hidden><span class="visits-text"></span></span>
+
+<script>
+  (() => {
+    const el = document.getElementById('visits');
+    if (!el) return;
+    const text = el.querySelector('.visits-text');
+
+    fetch('/api/visit', { headers: { accept: 'application/json' } })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('no counter'))))
+      .then((d) => {
+        const bits = [];
+        if (typeof d.count === 'number') bits.push(`visitor #${d.count.toLocaleString('en-IN')}`);
+        if (d.ip) bits.push(`from ${d.ip}`);
+        if (d.country) bits.push(d.country);
+        if (!bits.length) return;
+        text.textContent = bits.join(' · ');
+        el.hidden = false;
+      })
+      .catch(() => {
+        /* counter not deployed — leave it hidden */
+      });
+  })();
+</script>

@@ -52,8 +52,20 @@ NODE_VERSION = 20
 
 Save and Deploy. Every push to `main` redeploys; other branches get preview URLs.
 
-### 5. Custom domain
+### 4b. Enable the visitor counter
 
+The footer counter is served by `functions/api/visit.js` and needs one KV
+namespace:
+
+1. Workers & Pages → **KV** → **Create a namespace** (name it e.g. `rxwsxn-visits`).
+2. Your Pages project → **Settings** → **Functions** → **KV namespace bindings**
+   → **Add binding**. Variable name: **`VISITS`**, namespace: the one you made.
+3. Redeploy. The footer then shows `visitor #N · from <masked ip> · <country>`.
+
+Until this is done the function still returns the masked IP and country — the
+number is just omitted.
+
+### 5. Custom domain
 Project → **Custom domains** → **Set up a custom domain** → `rxwsxn.com`
 (and `www.rxwsxn.com`). If the domain's DNS is already on Cloudflare this wires
 up automatically; otherwise add the `CNAME` Cloudflare shows you at your

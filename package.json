@@ -8,6 +8,8 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "images": "python3 scripts/generate-og.py",
+    "og": "python3 scripts/generate-og.py",
     "astro": "astro"
   },
   "dependencies": {

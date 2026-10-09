@@ -1,13 +1,41 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import { SITE } from '../../site.config';
 
 const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
   (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
 );
+
+const blogUrl = new URL('/blog/', Astro.site).href;
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    '@id': `${blogUrl}#blog`,
+    url: blogUrl,
+    name: 'blog',
+    description: 'Dated notes — mostly ai, product, and building.',
+    inLanguage: 'en',
+    author: { '@type': 'Person', '@id': `${SITE.url}/#person`, name: SITE.name },
+    blogPost: posts.map((p) => ({
+      '@type': 'BlogPosting',
+      headline: p.data.title,
+      url: new URL(`/blog/${p.id}/`, Astro.site).href,
+      datePublished: p.data.date.toISOString(),
+      description: p.data.summary ?? p.data.title,
+    })),
+  },
+];
 ---
 
-<Base title="blog" description="Dated notes — mostly ai, product, and building.">
+<Base
+  title="blog"
+  description="Dated notes — mostly ai, product, and building."
+  image="/og/blog.png"
+  jsonLd={jsonLd}
+>
   <div class="page-head wrap">
     <h1>blog</h1>
     <p class="sub">dated notes. mostly ai, product, and building.</p>

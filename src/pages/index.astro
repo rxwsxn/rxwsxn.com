@@ -1,99 +1,63 @@
 ---
-import { getCollection, getEntry } from 'astro:content';
+import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import WorkItem from '../components/WorkItem.astro';
-import { SITE } from '../site.config';
+import Hero from '../components/Hero.astro';
 
-const allWork = await getCollection('work');
-const selectedWork = allWork
-  .filter((w) => w.data.status !== 'archived')
-  .sort((a, b) => a.data.order - b.data.order)
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
   .slice(0, 3);
 
-const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
-  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
-);
-const latest = posts.slice(0, 3);
-
-const nowEntry = await getEntry('now', 'now');
-const nowDate = nowEntry?.data.updated
-  ? nowEntry.data.updated.toISOString().slice(0, 10)
-  : null;
+const hub = [
+  { href: '/blog', title: 'blog', desc: 'dated notes — mostly ai, product, and building.' },
+  { href: '/about', title: 'about', desc: 'who i am, and how i work.' },
+  { href: '/contact', title: 'contact', desc: 'email, github, and the fastest way to reach me.' },
+];
 ---
 
 <Base>
-  <section class="hero wrap">
-    <div class={`hero-grid${SITE.showPhoto ? ' has-photo' : ''}`}>
-      <div class="hero-copy">
-        <h1>{SITE.wordmark}</h1>
-        <p class="lead">
-          {SITE.name} — I work across <span class="green">ai</span> and
-          <span class="green">product</span>: building things, shipping them, and
-          writing down what I learn along the way.
-        </p>
-        <p class="where">{SITE.location} · {SITE.tagline}</p>
-        <div class="hero-links">
-          <a href="/work">work →</a>
-          <a href="/blog">writing →</a>
-          <a href={SITE.github}>github ↗</a>
-          <a href="/contact">contact →</a>
-        </div>
-      </div>
-      {SITE.showPhoto && (
-        <figure class="hero-photo">
-          <img src="/portrait.jpg" alt={`${SITE.name} portrait`} width="190" height="190" />
-          <figcaption>{SITE.name}</figcaption>
-        </figure>
-      )}
+  <Hero />
+
+  <section class="section wrap">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <span class="label">explore</span>
+    </div>
+    <div class="hub">
+      {
+        hub.map((h) => (
+          <a class="hub-card glass" href={h.href}>
+            <span class="hub-title">{h.title}</span>
+            <span class="hub-desc">{h.desc}</span>
+          </a>
+        ))
+      }
     </div>
   </section>
 
   <section class="section wrap">
-    <span class="label">selected work</span>
-    {selectedWork.length > 0 ? (
-      <ul class="list">
-        {selectedWork.map((item) => (
-          <WorkItem
-            title={item.data.title}
-            summary={item.data.summary}
-            stack={item.data.stack}
-            status={item.data.status}
-            year={item.data.year}
-            links={item.data.links}
-          />
-        ))}
-      </ul>
-    ) : (
-      <p class="empty">no work items yet — drop a markdown file in src/content/work.</p>
-    )}
-    <p class="small"><a href="/work">all work →</a></p>
-  </section>
-
-  <section class="section wrap">
-    <span class="label">latest writing</span>
-    {latest.length > 0 ? (
-      <ul class="list">
-        {latest.map((post) => (
-          <li>
-            <div class="post-meta">
-              <a class="post-title" href={`/blog/${post.id}/`}>{post.data.title}</a>
-              <span class="post-date">{post.data.date.toISOString().slice(0, 10)}</span>
-            </div>
-            {post.data.summary && <p class="post-excerpt">{post.data.summary}</p>}
-          </li>
-        ))}
-      </ul>
-    ) : (
-      <p class="empty">no posts yet — the first one is on its way.</p>
-    )}
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <span class="label">latest writing</span>
+    </div>
+    {
+      posts.length > 0 ? (
+        <ul class="list">
+          {posts.map((post) => (
+            <li>
+              <div class="post-meta">
+                <a class="post-title" href={`/blog/${post.id}/`}>
+                  {post.data.title}
+                </a>
+                <span class="post-date">{post.data.date.toISOString().slice(0, 10)}</span>
+              </div>
+              {post.data.summary && <p class="post-excerpt">{post.data.summary}</p>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="empty">no posts yet.</p>
+      )
+    }
     <p class="small"><a href="/blog">all posts →</a></p>
-  </section>
-
-  <section class="section wrap">
-    <span class="label">now</span>
-    <p class="muted">
-      what i'm focused on right now{nowDate ? ` · updated ${nowDate}` : ''}
-    </p>
-    <p class="small"><a href="/now">see /now →</a></p>
   </section>
 </Base>
