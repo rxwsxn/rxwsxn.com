@@ -1,27 +1,20 @@
 // Cloudflare Pages Function — GET /api/visit
 //
-// Returns the visitor number, a MASKED IP, and Cloudflare's country code.
+// Returns the visitor number, the visitor's IP, and Cloudflare's country code.
 //
 // The count needs a KV namespace. In the Pages project: Settings → Functions →
 // KV namespace bindings → add a binding named VISITS. Without it, `count` comes
 // back as null and the UI just omits the number.
 //
-// Privacy: the full IP never leaves the edge — it's reduced to a partial
-// address here, and it's only ever shown back to the visitor themselves.
+// Privacy: the IP is read at the edge from CF-Connecting-IP and handed straight
+// back to the same visitor — it is never stored, logged or sent anywhere else.
 
 export async function onRequestGet({ request, env }) {
   const cf = request.cf || {};
   const country = String(cf.country || 'XX');
 
-  const raw = request.headers.get('CF-Connecting-IP') || '';
-  let ip = '';
-  if (raw.includes(':')) {
-    // IPv6 -> keep the first three groups
-    ip = raw.split(':').slice(0, 3).join(':') + '::';
-  } else if (raw) {
-    const parts = raw.split('.');
-    ip = parts.length === 4 ? `${parts[0]}.${parts[1]}.${parts[2]}.x` : '';
-  }
+  // the full address, shown only back to the visitor it belongs to
+  const ip = (request.headers.get('CF-Connecting-IP') || '').trim();
 
   // one increment per browser, not per pageview
   const cookie = request.headers.get('Cookie') || '';

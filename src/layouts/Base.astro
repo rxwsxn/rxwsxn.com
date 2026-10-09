@@ -19,6 +19,8 @@ interface Props {
   tags?: string[];
   /** Set true on pages that shouldn't be indexed (404, drafts). */
   noindex?: boolean;
+  /** Strip the site chrome — no header, no footer. For standalone pages. */
+  bare?: boolean;
   /** Extra schema.org blocks appended to the site graph. */
   jsonLd?: Record<string, unknown>[];
 }
@@ -33,6 +35,7 @@ const {
   modifiedTime,
   tags = [],
   noindex = false,
+  bare = false,
   jsonLd = [],
 } = Astro.props;
 
@@ -141,11 +144,11 @@ const blocks = [siteGraph, ...jsonLd];
   </head>
   <body>
     <a class="skip" href="#main">skip to content</a>
-    <Header />
+    {!bare && <Header />}
     <main id="main">
       <slot />
     </main>
-    <Footer />
+    {!bare && <Footer />}
     <Cursor />
   </body>
 </html>

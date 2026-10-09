@@ -1,6 +1,6 @@
 ---
 /**
- * Visitor text — visitor number, masked IP and country — shown next to the
+ * Visitor text — visitor number, IP and country flag — shown next to the
  * footer's blinking dot. Backed by the Pages Function at /api/visit. If that
  * isn't available (plain `astro dev`, or no KV binding yet) the span stays
  * hidden rather than showing anything fake.
@@ -15,15 +15,33 @@
     if (!el) return;
     const text = el.querySelector('.visits-text');
 
+    /** 'IN' -> 🇮🇳 (regional indicator symbols). Falls back to the code. */
+    const flagOf = (cc: string) => {
+      if (!/^[A-Za-z]{2}$/.test(cc)) return '';
+      return String.fromCodePoint(
+        ...[...cc.toUpperCase()].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65),
+      );
+    };
+
     fetch('/api/visit', { headers: { accept: 'application/json' } })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('no counter'))))
       .then((d) => {
-        const bits = [];
-        if (typeof d.count === 'number') bits.push(`visitor #${d.count.toLocaleString('en-IN')}`);
-        if (d.ip) bits.push(`from ${d.ip}`);
-        if (d.country) bits.push(d.country);
+        const bits: string[] = [];
+        if (typeof d.count === 'number') {
+          bits.push(`visitor #${d.count.toLocaleString('en-IN')}`);
+        } else {
+          // the function is live but has no KV namespace to count in
+          console.warn(
+            '[visitor counter] no count returned — bind a KV namespace named ' +
+              '"VISITS" to this Pages project (see DEPLOY.md step 4b).',
+          );
+        }
+        if (d.ip) bits.push(d.ip);
+        const flag = d.country ? flagOf(d.country) : '';
+        if (flag) bits.push(flag);
         if (!bits.length) return;
         text.textContent = bits.join(' · ');
+        if (d.country) el.setAttribute('title', `country: ${d.country}`);
         el.hidden = false;
       })
       .catch(() => {

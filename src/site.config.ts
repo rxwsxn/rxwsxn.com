@@ -40,7 +40,7 @@ export const SITE = {
   /** Set when you have one, e.g. '@rxwsxn'. Drives twitter:site and twitter:creator. */
   twitter: '@rxwsxn',
 
-  footerNote: 'static html  hand-written css',
+  footerNote: 'static html · hand-written css',
 
   /** Contact page links. 'github' and 'email' are rendered explicitly; the rest
    *  are appended below them. */

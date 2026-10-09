@@ -965,6 +965,21 @@ a, button { -webkit-tap-highlight-color: transparent; }
   gap: 8px 16px;
 }
 
+/* phones: stack the two halves and centre them, so a long IP can't orphan a
+   single word onto its own line the way it does in a left-aligned row */
+@media (max-width: 560px) {
+  .footer-inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 7px;
+    padding: 14px 16px;
+  }
+  .footer-line { justify-content: center; }
+  .footer-right { margin-left: 0; justify-content: center; }
+  .visits { font-size: 12px; }
+}
+
 .footer-left { color: var(--muted); }
 
 .footer-right {
@@ -979,7 +994,11 @@ a, button { -webkit-tap-highlight-color: transparent; }
   align-items: center;
   color: var(--muted2);
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
+
+/* balance the wrap so a long IPv6 can't leave the country code stranded */
+.visits-text { text-wrap: balance; }
 
 .live-dot {
   flex: 0 0 auto;

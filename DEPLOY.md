@@ -60,10 +60,33 @@ namespace:
 1. Workers & Pages → **KV** → **Create a namespace** (name it e.g. `rxwsxn-visits`).
 2. Your Pages project → **Settings** → **Functions** → **KV namespace bindings**
    → **Add binding**. Variable name: **`VISITS`**, namespace: the one you made.
-3. Redeploy. The footer then shows `visitor #N · from <masked ip> · <country>`.
+3. Redeploy. The footer then shows `visitor #N · <ip> · 🇮🇳`.
 
-Until this is done the function still returns the masked IP and country — the
-number is just omitted.
+Until this is done the function still returns the IP and country flag — the
+number is just omitted, and the browser console logs a warning telling you the
+`VISITS` binding is missing.
+
+### 4c. Enable the /links editor
+
+`/links` is an unlisted link-in-bio page, and `/links/edit` is a live editor for
+adding custom link cards to it (paste a URL, it pulls the page's OG image and
+title, you hit save). Both are excluded from the sitemap and marked noindex, and
+nothing on the site links to either.
+
+It needs two more things:
+
+1. **A KV namespace for the links.** Same as 4b, but bind it as **`LINKS`**
+   (a separate namespace, e.g. `rxwsxn-links`, so link edits and the visit
+   count don't share one).
+2. **An access token.** Settings → **Environment variables** → add
+   `LINKS_TOKEN` with a long random value (e.g. `openssl rand -hex 32`). Set it
+   for Production *and* Preview.
+
+Then redeploy and open **`/links/edit`**, paste the token once, and you're in —
+the token is kept in that browser's localStorage.
+
+The token is required for every write and for the preview proxy. Without it the
+editor can't save anything and `/api/preview` returns 401. Never commit it.
 
 ### 5. Custom domain
 Project → **Custom domains** → **Set up a custom domain** → `rxwsxn.com`

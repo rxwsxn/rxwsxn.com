@@ -1,0 +1,522 @@
+---
+import Base from '../../layouts/Base.astro';
+
+/**
+ * Editor for the custom links on /links.
+ *
+ * Unlisted like /links itself: not in the nav, not in the sitemap, noindex.
+ * Writes go through /api/links and /api/preview, both gated on a bearer token
+ * compared against the LINKS_TOKEN env var. The token is kept in localStorage
+ * so you only type it once per browser.
+ */
+---
+
+<Base title="links · editor" description="Editor" image="/og.png" noindex bare>
+  <div class="ed">
+    <header class="ed-head">
+      <h1>links editor</h1>
+      <p class="ed-sub">
+        Paste a URL, check the card it pulls, then save it. Saved links appear on
+        <a href="/links">/links</a> immediately.
+      </p>
+    </header>
+
+    <!-- token gate -->
+    <section class="ed-panel" id="gate">
+      <label class="ed-label" for="token">access token</label>
+      <div class="ed-row">
+        <input id="token" type="password" autocomplete="current-password" placeholder="LINKS_TOKEN" />
+        <button class="ed-btn" id="unlock" type="button">unlock</button>
+      </div>
+      <p class="ed-hint">
+        The value you set as <code>LINKS_TOKEN</code> in the Pages environment.
+        Stored in this browser only.
+      </p>
+    </section>
+
+    <!-- editor -->
+    <section class="ed-panel" id="work" hidden>
+      <label class="ed-label" for="url">add a link</label>
+      <div class="ed-row">
+        <input id="url" type="url" inputmode="url" placeholder="https://…" />
+        <button class="ed-btn" id="preview" type="button">fetch card</button>
+      </div>
+
+      <div class="ed-card" id="previewCard" hidden>
+        <img id="pvImg" alt="" hidden />
+        <div class="ed-card-body">
+          <span class="ed-site" id="pvSite"></span>
+          <strong class="ed-title" id="pvTitle"></strong>
+          <span class="ed-desc" id="pvDesc"></span>
+        </div>
+        <div class="ed-actions">
+          <button class="ed-btn ed-btn--go" id="save" type="button">save to links</button>
+          <button class="ed-btn" id="discard" type="button">discard</button>
+        </div>
+      </div>
+
+      <p class="ed-status" id="status" role="status" aria-live="polite"></p>
+
+      <h2 class="ed-h2">saved <span id="count"></span></h2>
+      <ul class="ed-list" id="list"></ul>
+      <p class="ed-hint" id="empty" hidden>nothing saved yet.</p>
+    </section>
+
+    <p class="ed-foot">
+      <button class="ed-linkish" id="signout" type="button" hidden>forget token</button>
+    </p>
+  </div>
+</Base>
+
+<script>
+  (() => {
+    const $ = (id: string) => document.getElementById(id) as HTMLElement | null;
+    const gate = $('gate');
+    const work = $('work');
+    const tokenInput = $('token') as HTMLInputElement | null;
+    const urlInput = $('url') as HTMLInputElement | null;
+    const status = $('status');
+    const list = $('list');
+    const empty = $('empty');
+    const count = $('count');
+    const previewCard = $('previewCard');
+    const signout = $('signout');
+    if (!gate || !work || !tokenInput || !urlInput || !status || !list) return;
+
+    const KEY = 'rxwsxn_links_token';
+    let token = localStorage.getItem(KEY) || '';
+    let pending: { url: string; title: string; description: string; image: string; site: string } | null = null;
+
+    const say = (msg: string, bad = false) => {
+      status.textContent = msg;
+      status.classList.toggle('is-bad', bad);
+    };
+
+    const authHeaders = (json = false): Record<string, string> => ({
+      Authorization: `Bearer ${token}`,
+      ...(json ? { 'content-type': 'application/json' } : {}),
+    });
+
+    function setUnlocked(on: boolean) {
+      gate.hidden = on;
+      work.hidden = !on;
+      if (signout) signout.hidden = !on;
+    }
+
+    /** Probe the token without side effects: an authorised POST with no url
+     *  comes back 400, an unauthorised one comes back 401. */
+    async function verify(candidate: string) {
+      const res = await fetch('/api/links', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${candidate}`, 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      return res.status !== 401;
+    }
+
+    /** A 401 means the stored token is wrong — drop back to the gate. */
+    function handleAuth(res: Response) {
+      if (res.status !== 401) return false;
+      token = '';
+      localStorage.removeItem(KEY);
+      setUnlocked(false);
+      say('token rejected — enter it again.', true);
+      return true;
+    }
+
+    async function loadList() {
+      const res = await fetch('/api/links', { headers: { accept: 'application/json' } });
+      const data = await res.json().catch(() => ({ links: [] }));
+      render(Array.isArray(data.links) ? data.links : []);
+    }
+
+    function render(links: any[]) {
+      if (!list) return;
+      list.innerHTML = '';
+      if (count) count.textContent = links.length ? `(${links.length})` : '';
+      if (empty) empty.hidden = links.length > 0;
+
+      links.forEach((l) => {
+        const li = document.createElement('li');
+
+        if (l.image) {
+          const img = document.createElement('img');
+          img.src = l.image;
+          img.alt = '';
+          img.loading = 'lazy';
+          img.referrerPolicy = 'no-referrer';
+          img.onerror = () => img.remove();
+          li.appendChild(img);
+        }
+
+        const body = document.createElement('div');
+        body.className = 'ed-card-body';
+        const site = document.createElement('span');
+        site.className = 'ed-site';
+        site.textContent = l.site || '';
+        const title = document.createElement('strong');
+        title.className = 'ed-title';
+        title.textContent = l.title || l.url;
+        const href = document.createElement('a');
+        href.className = 'ed-desc';
+        href.href = l.url;
+        href.target = '_blank';
+        href.rel = 'noopener';
+        href.textContent = l.url;
+        body.append(site, title, href);
+
+        const del = document.createElement('button');
+        del.className = 'ed-btn';
+        del.type = 'button';
+        del.textContent = 'remove';
+        del.addEventListener('click', async () => {
+          const res = await fetch('/api/links', {
+            method: 'DELETE',
+            headers: authHeaders(true),
+            body: JSON.stringify({ url: l.url }),
+          });
+          if (handleAuth(res)) return;
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) return say(data.error || 'could not remove', true);
+          render(data.links || []);
+          say('removed.');
+        });
+
+        li.append(body, del);
+        list.appendChild(li);
+      });
+    }
+
+    async function fetchCard() {
+      const url = urlInput.value.trim();
+      if (!url) return say('paste a url first.', true);
+      say('fetching…');
+      previewCard.hidden = true;
+
+      const res = await fetch('/api/preview?url=' + encodeURIComponent(url), {
+        headers: authHeaders(),
+      });
+      if (handleAuth(res)) return;
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return say(data.error || 'could not read that page', true);
+
+      pending = data;
+      ($('pvSite') as HTMLElement).textContent = data.site || '';
+      ($('pvTitle') as HTMLElement).textContent = data.title || data.url;
+      ($('pvDesc') as HTMLElement).textContent = data.description || '';
+      const img = $('pvImg') as HTMLImageElement | null;
+      if (img) {
+        if (data.image) {
+          img.src = data.image;
+          img.hidden = false;
+        } else {
+          img.hidden = true;
+          img.removeAttribute('src');
+        }
+      }
+      previewCard.hidden = false;
+      say(data.title ? 'card ready — save it?' : 'no title found, but you can still save.');
+    }
+
+    async function save() {
+      if (!pending) return;
+      const res = await fetch('/api/links', {
+        method: 'POST',
+        headers: authHeaders(true),
+        body: JSON.stringify({ link: pending }),
+      });
+      if (handleAuth(res)) return;
+
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        say('already saved.');
+        previewCard.hidden = true;
+        return;
+      }
+      if (!res.ok) return say(data.error || 'could not save', true);
+
+      render(data.links || []);
+      previewCard.hidden = true;
+      urlInput.value = '';
+      pending = null;
+      say('saved — it is live on /links.');
+    }
+
+    // ---- wiring ------------------------------------------------------------
+    ($('unlock') as HTMLElement).addEventListener('click', async () => {
+      const v = tokenInput.value.trim();
+      if (!v) return say('enter the token.', true);
+      say('checking…');
+      const ok = await verify(v).catch(() => false);
+      if (!ok) {
+        token = '';
+        localStorage.removeItem(KEY);
+        setUnlocked(false);
+        return say('that token was rejected.', true);
+      }
+      token = v;
+      localStorage.setItem(KEY, token);
+      setUnlocked(true);
+      say('');
+      await loadList();
+    });
+
+    ($('preview') as HTMLElement).addEventListener('click', fetchCard);
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        fetchCard();
+      }
+    });
+
+    ($('save') as HTMLElement).addEventListener('click', save);
+    ($('discard') as HTMLElement).addEventListener('click', () => {
+      previewCard.hidden = true;
+      pending = null;
+      say('');
+    });
+
+    signout?.addEventListener('click', () => {
+      token = '';
+      localStorage.removeItem(KEY);
+      setUnlocked(false);
+      say('');
+    });
+
+    if (token) {
+      // a stored token might be stale — check before trusting it
+      verify(token)
+        .then((ok) => {
+          if (!ok) {
+            token = '';
+            localStorage.removeItem(KEY);
+            setUnlocked(false);
+            say('saved token no longer works — enter it again.', true);
+            return;
+          }
+          setUnlocked(true);
+          loadList();
+        })
+        .catch(() => setUnlocked(false));
+    } else {
+      setUnlocked(false);
+    }
+  })();
+</script>
+
+<style>
+  .ed {
+    max-width: 620px;
+    margin-inline: auto;
+    padding: 48px 20px 72px;
+  }
+  .ed-head h1 {
+    font-size: 26px;
+    margin: 0 0 6px;
+  }
+  .ed-sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 0 24px;
+  }
+
+  .ed-panel {
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r, 16px);
+    box-shadow: inset 0 1px 0 var(--glass-hi), 0 10px 30px rgba(0, 0, 0, 0.4);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .ed-label {
+    display: block;
+    color: var(--muted2);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .ed-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .ed-row input {
+    flex: 1 1 220px;
+    min-width: 0;
+    font: inherit;
+    font-size: 15px;
+    padding: 11px 13px;
+    color: var(--fg);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+  }
+  .ed-row input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  /* These nodes are also built in JS (render() creates the saved list), so
+     they need :global() — Astro's scoping attribute only lands on elements
+     written in the template. */
+  :global(.ed-btn) {
+    font: inherit;
+    font-size: 14px;
+    padding: 11px 16px;
+    color: var(--fg);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  :global(.ed-btn:hover) {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  :global(.ed-btn--go) {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+
+  .ed-hint {
+    color: var(--muted2);
+    font-size: 13px;
+    margin: 10px 0 0;
+  }
+  .ed-hint code {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .ed-card {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding: 14px;
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .ed-card img {
+    width: 96px;
+    height: 68px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    flex: 0 0 auto;
+    background: #0b0b0b;
+  }
+  :global(.ed-card-body) {
+    flex: 1 1 180px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  :global(.ed-site) {
+    color: var(--muted2);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  :global(.ed-title) {
+    font-size: 15px;
+    line-height: 1.3;
+  }
+  :global(.ed-desc) {
+    color: var(--muted);
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+  }
+  .ed-actions {
+    flex: 1 1 100%;
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .ed-status {
+    color: var(--accent);
+    font-size: 13px;
+    margin: 12px 0 0;
+    min-height: 1em;
+  }
+  .ed-status.is-bad {
+    color: var(--red);
+  }
+
+  .ed-h2 {
+    font-size: 13px;
+    color: var(--muted2);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 26px 0 12px;
+  }
+  .ed-h2 span {
+    color: var(--muted2);
+  }
+
+  :global(.ed-list) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+  :global(.ed-list li) {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+  }
+  :global(.ed-list li > .ed-btn) { margin-left: auto; }
+  :global(.ed-list img) {
+    width: 72px;
+    height: 52px;
+    object-fit: cover;
+    border-radius: 9px;
+    border: 1px solid var(--glass-border);
+    flex: 0 0 auto;
+    background: #0b0b0b;
+  }
+
+  .ed-foot {
+    margin: 26px 0 0;
+    text-align: center;
+  }
+  .ed-linkish {
+    font: inherit;
+    font-size: 13px;
+    color: var(--muted2);
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  .ed-linkish:hover {
+    color: var(--accent);
+  }
+
+  @media (max-width: 460px) {
+    .ed {
+      padding: 36px 16px 56px;
+    }
+    .ed-card img,
+    :global(.ed-list img) {
+      width: 60px;
+      height: 44px;
+    }
+  }
+</style>

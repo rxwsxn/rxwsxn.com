@@ -30,7 +30,7 @@ const rxDark = {
 // https://astro.build/config
 export default defineConfig({
   site: 'https://rxwsxn.com',
-  integrations: [mdx(), sitemap()],
+  integrations: [mdx(), sitemap({ filter: (page) => !page.includes('/links') })],
   markdown: {
     shikiConfig: {
       theme: rxDark,

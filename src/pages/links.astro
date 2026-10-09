@@ -1,0 +1,275 @@
+---
+import Base from '../layouts/Base.astro';
+import SocialIcon from '../components/SocialIcon.astro';
+import { SITE } from '../site.config';
+
+/**
+ * Unlisted link-in-bio page.
+ *
+ * Deliberately not referenced anywhere on the site: no nav entry, no footer
+ * link, and excluded from the sitemap in astro.config.mjs. It is also noindex,
+ * so it stays out of search results. Share the URL directly.
+ */
+const links = SITE.links;
+
+// SITE.links calls it 'email'; the icon set calls it 'mail'
+const iconFor = (label: string) => (label === 'email' ? 'mail' : label);
+---
+
+<Base
+  title="links"
+  description={`Everywhere ${SITE.name} is.`}
+  image="/og.png"
+  noindex
+  bare
+>
+  <div class="lt">
+    <header class="lt-head">
+      <span class="lt-avatar" aria-hidden="true">rk</span>
+      <h1 class="lt-name">{SITE.name}</h1>
+      <p class="lt-bio">{SITE.jobTitle} · {SITE.location}</p>
+    </header>
+
+    <ul class="lt-logos">
+      {links.map((l) => (
+        <li>
+          <a href={l.href} rel="me noopener" aria-label={l.label} title={l.label}>
+            <SocialIcon name={iconFor(l.label)} brand />
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    <ul class="lt-cards" id="lt-cards" hidden></ul>
+
+    <p class="lt-foot">
+      <a href="/">{SITE.url.replace('https://', '')}</a>
+    </p>
+  </div>
+</Base>
+
+<script>
+  // Custom links live in KV, not in the build, so they're fetched at runtime.
+  // The list stays hidden until it has something in it — no empty flash.
+  (() => {
+    const wrap = document.getElementById('lt-cards');
+    if (!wrap) return;
+
+    fetch('/api/links', { headers: { accept: 'application/json' } })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('no links'))))
+      .then((d) => {
+        const links = Array.isArray(d.links) ? d.links : [];
+        if (!links.length) return;
+
+        for (const l of links) {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = l.url;
+          a.target = '_blank';
+          a.rel = 'noopener';
+
+          if (l.image) {
+            const img = document.createElement('img');
+            img.src = l.image;
+            img.alt = '';
+            img.loading = 'lazy';
+            img.referrerPolicy = 'no-referrer';
+            img.onerror = () => img.remove();
+            a.appendChild(img);
+          }
+
+          const body = document.createElement('div');
+          body.className = 'lt-card-body';
+          const site = document.createElement('span');
+          site.className = 'lt-card-site';
+          site.textContent = l.site || '';
+          const title = document.createElement('strong');
+          title.className = 'lt-card-title';
+          title.textContent = l.title || l.url;
+          const desc = document.createElement('span');
+          desc.className = 'lt-card-desc';
+          desc.textContent = l.description || '';
+          body.append(site, title, desc);
+
+          a.appendChild(body);
+          li.appendChild(a);
+          wrap.appendChild(li);
+        }
+        wrap.hidden = false;
+      })
+      .catch(() => {
+        /* no /api/links (astro dev, or no KV) — leave the cards hidden */
+      });
+  })();
+</script>
+
+<style>
+  .lt {
+    max-width: 560px;
+    margin-inline: auto;
+    padding: 64px 20px 64px;
+  }
+
+  .lt-head {
+    text-align: center;
+    margin-bottom: 26px;
+  }
+  .lt-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--accent);
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-hi), 0 10px 30px rgba(0, 0, 0, 0.45);
+  }
+  .lt-name {
+    margin: 18px 0 6px;
+    font-size: 24px;
+    letter-spacing: -0.01em;
+  }
+  .lt-bio {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* the socials, as logos: one or two lines, real brand colours */
+  .lt-logos {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+  .lt-logos a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-hi), 0 8px 24px rgba(0, 0, 0, 0.35);
+    transition: transform 0.16s ease, border-color 0.16s ease;
+  }
+  .lt-logos a:hover,
+  .lt-logos a:focus-visible {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  .lt-logos a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .lt-logos :global(.social-icon) {
+    width: 21px;
+    height: 21px;
+    display: block;
+  }
+
+  .lt-foot {
+    margin: 34px 0 0;
+    text-align: center;
+    font-size: 13px;
+  }
+
+  /* custom links, saved from /links/edit.
+     These nodes are built in JS, so they never receive Astro's scoping
+     attribute — the whole selector has to be :global() to match them. */
+  :global(.lt-cards) {
+    list-style: none;
+    margin: 26px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+  :global(.lt-cards a) {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 12px;
+    border-radius: 16px;
+    color: var(--fg);
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-hi), 0 8px 24px rgba(0, 0, 0, 0.35);
+    transition: transform 0.16s ease, border-color 0.16s ease;
+  }
+  :global(.lt-cards a:hover),
+  :global(.lt-cards a:focus-visible) {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    text-decoration: none;
+  }
+  :global(.lt-cards a:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  :global(.lt-cards img) {
+    width: 92px;
+    height: 66px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    background: #0b0b0b;
+    flex: 0 0 auto;
+  }
+  :global(.lt-card-body) {
+    flex: 1 1 160px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  :global(.lt-card-site) {
+    color: var(--muted2);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  :global(.lt-card-title) {
+    font-size: 15px;
+    line-height: 1.3;
+  }
+  :global(.lt-card-desc) {
+    color: var(--muted);
+    font-size: 13px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .lt-foot a {
+    color: var(--muted2);
+  }
+  .lt-foot a:hover {
+    color: var(--accent);
+  }
+
+  @media (max-width: 420px) {
+    .lt { padding: 44px 16px 52px; }
+    .lt-avatar { width: 72px; height: 72px; font-size: 22px; }
+    .lt-name { font-size: 21px; }
+    .lt-logos { gap: 8px; }
+    .lt-logos a { width: 44px; height: 44px; }
+    .lt-logos :global(.social-icon) { width: 20px; height: 20px; }
+    .lt-cards img { width: 64px; height: 48px; }
+  }
+</style>
