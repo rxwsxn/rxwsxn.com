@@ -1,11 +1,11 @@
 ---
 import Base from '../layouts/Base.astro';
 import CopyEmail from '../components/CopyEmail.astro';
+import SocialIcon from '../components/SocialIcon.astro';
 import { SITE } from '../site.config';
 
-const extra = SITE.links.filter(
-  (l) => l.label !== 'github' && l.label !== 'email',
-);
+// every http(s) entry in SITE.links becomes a logo link
+const socials = SITE.links.filter((l) => l.href.startsWith('http'));
 ---
 
 <Base
@@ -19,28 +19,19 @@ const extra = SITE.links.filter(
   </div>
 
   <section class="section wrap">
-    <ul class="contact-list">
-      <li>
-        <span class="contact-key">email</span>
-        <CopyEmail />
-      </li>
-      <li>
-        <span class="contact-key">github</span>
-        <span class="contact-val">
-          <a href={SITE.github}>{SITE.github.replace('https://', '')}</a>
-        </span>
-      </li>
-      {extra.map((l) => (
+    <div class="email-row">
+      <SocialIcon name="mail" />
+      <CopyEmail />
+    </div>
+
+    <ul class="socials">
+      {socials.map((l) => (
         <li>
-          <span class="contact-key">{l.label}</span>
-          <span class="contact-val"><a href={l.href}>{l.href}</a></span>
+          <a href={l.href} rel="me noopener" aria-label={l.label} title={l.label}>
+            <SocialIcon name={l.label} />
+          </a>
         </li>
       ))}
     </ul>
-
-    <p class="muted small">
-      linkedin / x / resume — add them in <code>src/site.config.ts</code> and they
-      show up here.
-    </p>
   </section>
 </Base>

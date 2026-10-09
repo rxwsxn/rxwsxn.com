@@ -23,8 +23,8 @@ export const SITE = {
 
   /** The currently / previously strip under the hero. */
   now: [
-    { k: 'currently', v: 'building ai products and writing the messy parts down' },
-    { k: 'previously', v: 'add your last role here' },
+    { k: 'currently', v: 'building dostlabs — an ai + saas product studio' },
+    { k: 'previously', v: 'software engineer (ai) at deep cognition' },
     { k: 'based in', v: 'bangalore / remote' },
   ],
 
@@ -38,14 +38,20 @@ export const SITE = {
   /** Locale for og:locale and JSON-LD. */
   locale: 'en_IN',
   /** Set when you have one, e.g. '@rxwsxn'. Drives twitter:site and twitter:creator. */
-  twitter: '',
+  twitter: '@rxwsxn',
 
   footerNote: 'static html · hand-written css',
 
-  /** Contact + footer links. Add linkedin / x / resume here when you have them. */
+  /** Contact page links. 'github' and 'email' are rendered explicitly; the rest
+   *  are appended below them. */
   links: [
     { label: 'github', href: 'https://github.com/rxwsxn' },
     { label: 'email', href: 'mailto:raushan@rxwsxn.com' },
+    { label: 'x', href: 'https://x.com/rxwsxn' },
+    { label: 'linkedin', href: 'https://www.linkedin.com/in/rxwsxn' },
+    { label: 'youtube', href: 'https://www.youtube.com/@rxwsxn' },
+    { label: 'instagram', href: 'https://www.instagram.com/rxwsxn' },
+    { label: 'peerlist', href: 'https://peerlist.io/raushan' },
   ],
 };
 
