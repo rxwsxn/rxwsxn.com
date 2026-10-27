@@ -7,7 +7,7 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft))
   .slice(0, 3);
 ---
 <Base title="AI product engineer" description="Raushan Kumar builds AI-powered products, LLM workflows and useful software. Based in Bangalore, India; open to thoughtful collaboration.">
-  <main class="editorial-home">
+  <div class="editorial-home">
     <section class="editorial-hero" aria-labelledby="hero-title">
       <div class="hero-topline"><span>Independent thinking · Applied intelligence</span><span class="availability">Bangalore, India · Open to good problems</span></div>
       <div class="hero-layout">
@@ -34,5 +34,5 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft))
       {posts.length > 0 ? <ul class="list">{posts.map((post) => <li><div class="post-meta"><a class="post-title" href={`/blog/${post.id}/`}>{post.data.title}</a><span class="post-date">{post.data.date.toISOString().slice(0, 10)}</span></div>{post.data.summary && <p class="post-excerpt">{post.data.summary}</p>}</li>)}</ul> : <p class="empty">New notes will appear here as they are published.</p>}
     </section>
     <section class="editorial-section"><div class="contact-band"><div><h2>Have a good problem?</h2><p>AI, software, product engineering or a thoughtful collaboration.</p></div><a class="button-link" href="/contact">Start a conversation <span aria-hidden="true">↗</span></a></div></section>
-  </main>
+  </div>
 </Base>
