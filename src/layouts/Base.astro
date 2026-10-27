@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import '../styles/editorial.css';
 import fs from 'node:fs';
 import { SITE } from '../site.config';
 import Header from '../components/Header.astro';
@@ -100,8 +101,11 @@ const blocks = [siteGraph, ...jsonLd];
     }
     {!noindex && <link rel="canonical" href={canonical} />}
     <meta name="author" content={SITE.name} />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#f4f1e9" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
