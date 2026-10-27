@@ -1,63 +1,38 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import Hero from '../components/Hero.astro';
 
 const posts = (await getCollection('blog', ({ data }) => !data.draft))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
   .slice(0, 3);
-
-const hub = [
-  { href: '/blog', title: 'blog', desc: 'dated notes — mostly ai, product, and building.' },
-  { href: '/about', title: 'about', desc: 'who i am, and how i work.' },
-  { href: '/contact', title: 'contact', desc: 'email, github, and the fastest way to reach me.' },
-];
 ---
-
-<Base>
-  <Hero />
-
-  <section class="section wrap">
-    <div class="sec-head">
-      <span class="sec-num">01</span>
-      <span class="label">explore</span>
-    </div>
-    <div class="hub">
-      {
-        hub.map((h) => (
-          <a class="hub-card glass" href={h.href}>
-            <span class="hub-title">{h.title}</span>
-            <span class="hub-desc">{h.desc}</span>
-          </a>
-        ))
-      }
-    </div>
-  </section>
-
-  <section class="section wrap">
-    <div class="sec-head">
-      <span class="sec-num">02</span>
-      <span class="label">latest writing</span>
-    </div>
-    {
-      posts.length > 0 ? (
-        <ul class="list">
-          {posts.map((post) => (
-            <li>
-              <div class="post-meta">
-                <a class="post-title" href={`/blog/${post.id}/`}>
-                  {post.data.title}
-                </a>
-                <span class="post-date">{post.data.date.toISOString().slice(0, 10)}</span>
-              </div>
-              {post.data.summary && <p class="post-excerpt">{post.data.summary}</p>}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p class="empty">no posts yet.</p>
-      )
-    }
-    <p class="small"><a href="/blog">all posts →</a></p>
-  </section>
+<Base title="AI product engineer" description="Raushan Kumar builds AI-powered products, LLM workflows and useful software. Based in Bangalore, India; open to thoughtful collaboration.">
+  <div class="editorial-home">
+    <section class="editorial-hero" aria-labelledby="hero-title">
+      <div class="hero-topline"><span>Independent thinking · Applied intelligence</span><span class="availability">Bangalore, India · Open to good problems</span></div>
+      <div class="hero-layout">
+        <div>
+          <p class="hero-kicker">Hello, I’m Raushan Kumar — AI + software</p>
+          <h1 id="hero-title">Turning<br />ideas into<br /><em>useful</em> things.</h1>
+          <p class="hero-lede">I work at the intersection of AI, software and product thinking — moving beyond the demo to build systems that solve real problems for real people.</p>
+          <div class="hero-actions"><a class="button-link" href="/work">Explore selected work <span aria-hidden="true">↗</span></a><a class="button-link secondary" href="/contact">Get in touch <span aria-hidden="true">↗</span></a></div>
+        </div>
+        <aside class="hero-aside"><span class="aside-label">A working principle</span><p>Good engineering is not just making something possible. It is making it dependable, understandable, and genuinely useful.</p><p class="aside-note">Currently interested in applied AI, LLM evaluation, retrieval, product infrastructure and the small details that make software feel considered.</p></aside>
+      </div>
+      <div class="now-strip" aria-label="Current focus"><div class="now-item"><span class="meta-label">01 / Focus</span><p>Applied AI &amp; product engineering</p></div><div class="now-item"><span class="meta-label">02 / Exploring</span><p>LLM evaluation, retrieval &amp; agent workflows</p></div><div class="now-item"><span class="meta-label">03 / Based</span><p>Bangalore, India · Remote-friendly</p></div></div>
+    </section>
+    <section class="editorial-section" aria-labelledby="work-heading"><div class="section-heading"><h2 id="work-heading">Selected directions</h2><span class="section-index">01 — WORK &amp; EXPLORATION</span><a href="/work">View all work ↗</a></div>
+      <div class="project-grid">
+        <a class="project-card" href="/work#threadline"><div class="project-card-top"><span>Product exploration</span><span>01 / 02</span></div><span class="project-arrow" aria-hidden="true">↗</span><h3>Threadline POS</h3><p>Exploring a thoughtful point-of-sale and inventory experience for independent retail — with the everyday realities of Indian businesses in mind.</p><div class="project-tags"><span>Product thinking</span><span>Retail systems</span><span>UX</span></div></a>
+        <a class="project-card" href="/work#applied-ai"><div class="project-card-top"><span>Technical focus</span><span>02 / 02</span></div><span class="project-arrow" aria-hidden="true">↗</span><h3>Applied AI systems</h3><p>Model-backed features, evaluation practices and retrieval workflows designed around reliability and measurable usefulness.</p><div class="project-tags"><span>LLMs</span><span>Evaluation</span><span>Retrieval</span></div></a>
+      </div>
+    </section>
+    <section class="editorial-section" aria-labelledby="approach-heading"><div class="section-heading"><h2 id="approach-heading">How I approach the work</h2><span class="section-index">02 — PRINCIPLES</span></div>
+      <div class="principles-grid"><article class="principle"><span class="principle-no">01</span><h3>Start with the problem.</h3><p>Understand the user, constraints and desired outcome before reaching for a model or framework.</p></article><article class="principle"><span class="principle-no">02</span><h3>Make quality visible.</h3><p>Use evaluation, observability and clear feedback loops to understand whether a system is actually working.</p></article><article class="principle"><span class="principle-no">03</span><h3>Ship the whole thing.</h3><p>Care about the interface, edge cases, performance and maintenance — not just the exciting prototype.</p></article></div>
+    </section>
+    <section class="editorial-section" aria-labelledby="writing-heading"><div class="section-heading"><h2 id="writing-heading">Notes from the process</h2><span class="section-index">03 — WRITING</span><a href="/blog">All writing ↗</a></div>
+      {posts.length > 0 ? <ul class="list">{posts.map((post) => <li><div class="post-meta"><a class="post-title" href={`/blog/${post.id}/`}>{post.data.title}</a><span class="post-date">{post.data.date.toISOString().slice(0, 10)}</span></div>{post.data.summary && <p class="post-excerpt">{post.data.summary}</p>}</li>)}</ul> : <p class="empty">New notes will appear here as they are published.</p>}
+    </section>
+    <section class="editorial-section"><div class="contact-band"><div><h2>Have a good problem?</h2><p>AI, software, product engineering or a thoughtful collaboration.</p></div><a class="button-link" href="/contact">Start a conversation <span aria-hidden="true">↗</span></a></div></section>
+  </div>
 </Base>
