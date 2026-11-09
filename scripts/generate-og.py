@@ -46,13 +46,13 @@ WORK_OUT = os.path.join(PUBLIC, "work")
 
 W, H = 1200, 630
 INK = (11, 11, 11)
-BG = "#0a0a0a"
-FG = "#e6e6e6"
-MUTED = "#9a9a9a"
-MUTED2 = "#6a6a6a"
-GREEN = "#00ff88"
-GRN = (0, 255, 136)
-BORDER = "#1e1e1e"
+BG = "#0b0b0b"
+FG = "#f4f1ea"
+MUTED = "#8b8b86"
+MUTED2 = "#5c5c58"
+ACCENT = "#f4f1ea"
+ACCENT_RGB = (244, 241, 234)
+BORDER = "#2a2a2a"
 
 
 # ---- fonts -----------------------------------------------------------------
@@ -136,8 +136,8 @@ def _grid(d, w, h, step=40, alpha=7):
 
 def _ticks(d, w, h, m=22, ln=18, alpha=90):
     for px, py, dx, dy in [(m, m, 1, 1), (w - m, m, -1, 1), (m, h - m, 1, -1), (w - m, h - m, -1, -1)]:
-        d.line([(px, py), (px + dx * ln, py)], fill=(*GRN, alpha), width=2)
-        d.line([(px, py), (px, py + dy * ln)], fill=(*GRN, alpha), width=2)
+        d.line([(px, py), (px + dx * ln, py)], fill=(*ACCENT_RGB, alpha), width=2)
+        d.line([(px, py), (px, py + dy * ln)], fill=(*ACCENT_RGB, alpha), width=2)
 
 
 def _phyllotaxis(d, cx, cy, R, n, base_alpha=90, golden=137.507764):
@@ -148,7 +148,7 @@ def _phyllotaxis(d, cx, cy, R, n, base_alpha=90, golden=137.507764):
         x, y = cx + r * math.cos(a), cy + r * math.sin(a)
         s = 0.6 + 1.8 * (i / n)
         al = int(base_alpha * (0.3 + 0.7 * (i / n)))
-        d.ellipse([x - s, y - s, x + s, y + s], fill=(*GRN, al))
+        d.ellipse([x - s, y - s, x + s, y + s], fill=(*ACCENT_RGB, al))
 
 
 # ---- mathematical constructions (800x500) ----------------------------------
@@ -173,7 +173,7 @@ def art_field(w, h, rnd):
             v = (math.sin(x * fx) + math.sin(y * fy) + math.sin((x + y) * fp)) / 3
             if v > 0.12:
                 al = int(30 + 200 * min(1.0, (v + 1) / 2))
-                d.rectangle([x, y, x + c - 3, y + c - 3], fill=(*GRN, al))
+                d.rectangle([x, y, x + c - 3, y + c - 3], fill=(*ACCENT_RGB, al))
     _ticks(d, w, h)
     return img
 
@@ -183,7 +183,7 @@ def art_moire(w, h, rnd):
     d = ImageDraw.Draw(img, "RGBA")
     cx, cy = w / 2, h / 2
     for k in range(-h, h, 6):
-        d.line([(0, cy + k), (w, cy + k)], fill=(*GRN, 78))
+        d.line([(0, cy + k), (w, cy + k)], fill=(*ACCENT_RGB, 78))
     ang = math.radians(rnd.uniform(5, 9))
     L = max(w, h)
     ux, uy = math.cos(ang), math.sin(ang)
@@ -191,7 +191,7 @@ def art_moire(w, h, rnd):
     for k in range(-L, L, 6):
         d.line(
             [(cx + nx * k - ux * L, cy + ny * k - uy * L), (cx + nx * k + ux * L, cy + ny * k + uy * L)],
-            fill=(*GRN, 78),
+            fill=(*ACCENT_RGB, 78),
         )
     _ticks(d, w, h)
     return img
@@ -208,7 +208,7 @@ def art_lissajous(w, h, rnd):
         (cx + A * math.sin(a * (t := 2 * math.pi * i / 1800) + delta), cy + B * math.sin(b * t))
         for i in range(1801)
     ]
-    d.line(pts, fill=(*GRN, 120), width=1)
+    d.line(pts, fill=(*ACCENT_RGB, 120), width=1)
     _ticks(d, w, h)
     return img
 
@@ -238,7 +238,7 @@ def art_superformula(w, h, rnd):
             if not math.isfinite(r) or r > 50:
                 r = 0.0
             pts.append((cx + R * r * math.cos(phi), cy + R * r * math.sin(phi)))
-        d.line(pts, fill=(*GRN, max(90 - k * 10, 30)), width=2)
+        d.line(pts, fill=(*ACCENT_RGB, max(90 - k * 10, 30)), width=2)
     _ticks(d, w, h)
     return img
 
@@ -255,9 +255,9 @@ def art_lattice(w, h, rnd):
     for i, p in enumerate(pts):
         near = sorted(range(len(pts)), key=lambda j: (pts[j][0] - p[0]) ** 2 + (pts[j][1] - p[1]) ** 2)[1:3]
         for j in near:
-            d.line([p, pts[j]], fill=(*GRN, 42), width=1)
+            d.line([p, pts[j]], fill=(*ACCENT_RGB, 42), width=1)
     for p in pts:
-        d.ellipse([p[0] - 2, p[1] - 2, p[0] + 2, p[1] + 2], fill=(*GRN, 180))
+        d.ellipse([p[0] - 2, p[1] - 2, p[0] + 2, p[1] + 2], fill=(*ACCENT_RGB, 180))
     _ticks(d, w, h)
     return img
 
@@ -279,7 +279,7 @@ def art_hilbert(w, h, rnd):
     size = min(w, h) - 44
     hilbert(22, 22, size, 0, 0, size, rnd.choice([4, 5]))
     if len(pts) > 1:
-        d.line(pts, fill=(*GRN, 120), width=2)
+        d.line(pts, fill=(*ACCENT_RGB, 120), width=2)
     _ticks(d, w, h)
     return img
 
@@ -292,8 +292,8 @@ def art_rings(w, h, rnd):
     cy = h * (0.30 + 0.40 * rnd.random())
     for i in range(15):
         r = 18 + i * 26
-        d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=(*GRN, max(150 - i * 10, 14)), width=2)
-    d.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=(*GRN, 255))
+        d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=(*ACCENT_RGB, max(150 - i * 10, 14)), width=2)
+    d.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=(*ACCENT_RGB, 255))
     _ticks(d, w, h)
     return img
 
@@ -329,13 +329,13 @@ def _rounded_mask(size, radius):
 
 
 def _aurora_bg(w, h):
-    """Soft green/teal/violet glow field, matching the site's Liquid Glass backdrop."""
+    """Soft monochrome glow field, matching the site's flat backdrop."""
     glow = Image.new("RGB", (w, h), BG)
     gd = ImageDraw.Draw(glow, "RGBA")
     for cx, cy, R, col in [
-        (w * 0.10, h * 0.10, max(w, h) * 0.26, (0, 255, 136, 46)),
-        (w * 0.92, h * 0.14, max(w, h) * 0.22, (0, 190, 255, 30)),
-        (w * 0.90, h * 0.92, max(w, h) * 0.26, (0, 255, 170, 34)),
+        (w * 0.10, h * 0.10, max(w, h) * 0.26, (244, 241, 234, 26)),
+        (w * 0.92, h * 0.14, max(w, h) * 0.22, (244, 241, 234, 16)),
+        (w * 0.90, h * 0.92, max(w, h) * 0.26, (244, 241, 234, 20)),
     ]:
         gd.ellipse([cx - R, cy - R, cx + R, cy + R], fill=col)
     return glow.filter(ImageFilter.GaussianBlur(90))
@@ -394,7 +394,7 @@ def card_page(title: str, subtitle: str, motif: int, current: str, seed_key: str
     lh = int(f.size * 1.26)
     ty = 200
     for line in lines:
-        d.text((98, ty), line, font=f, fill=GREEN)
+        d.text((98, ty), line, font=f, fill=ACCENT)
         ty += lh
     sy = ty + 14
     for line in wrap(d, subtitle, font(26), 660)[:2]:
@@ -405,7 +405,7 @@ def card_page(title: str, subtitle: str, motif: int, current: str, seed_key: str
     nx = 98
     for item in NAV:
         label = f"[ {item} ]"
-        d.text((nx, 486), label, font=font(22), fill=(GREEN if item == current else MUTED2))
+        d.text((nx, 486), label, font=font(22), fill=(ACCENT if item == current else MUTED2))
         nx += text_w(d, label, font(22)) + 18
     return img
 
@@ -415,9 +415,9 @@ def apple_touch_icon():
     img = Image.new("RGB", (s, s), BG)
     d = ImageDraw.Draw(img, "RGBA")
     d.rectangle([0, 0, s - 1, s - 1], outline=BORDER, width=2)
-    d.rectangle([38, 38, s - 38, s - 38], outline=(*GRN, 230), width=4)
-    d.ellipse([56, 56, s - 56, s - 56], outline=(*GRN, 120), width=4)
-    d.ellipse([s / 2 - 9, s / 2 - 9, s / 2 + 9, s / 2 + 9], fill=(*GRN, 255))
+    d.rectangle([38, 38, s - 38, s - 38], outline=(*ACCENT_RGB, 230), width=4)
+    d.ellipse([56, 56, s - 56, s - 56], outline=(*ACCENT_RGB, 120), width=4)
+    d.ellipse([s / 2 - 9, s / 2 - 9, s / 2 + 9, s / 2 + 9], fill=(*ACCENT_RGB, 255))
     _ticks(d, s, s, m=12, ln=14, alpha=150)
     return img
 

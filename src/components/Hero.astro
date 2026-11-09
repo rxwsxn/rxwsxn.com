@@ -1,37 +1,47 @@
 ---
 import { SITE } from '../site.config';
-import Lattice from './Lattice.astro';
 
-const words = [...SITE.heroWords];
-// duplicate the first word so the loop is seamless
-const track = [...words, words[0]];
+/**
+ * Full-viewport hero. The statement is set in two lines — bold, a serif italic
+ * in the middle, bold again — and each word rises in sequence. A hand-drawn
+ * stroke underlines the italic word once the line has landed.
+ */
+const words = SITE.name.split(' ');
 ---
 
-<section class="hero2 wrap">
-  <span class="greet">{SITE.greeting}</span>
+<section class="hero">
+  <div class="wrap hero-inner">
+    <div class="hero-meta">
+      <span class="micro">Portfolio — {new Date().getFullYear()}</span>
+      <span class="micro">{SITE.jobTitle}</span>
+    </div>
 
-  <h1 class="statement">
-    I build<br />
-    <span class="rotator" aria-label={words.join(', ')}>
-      <span class="rotator-track" aria-hidden="true">
-        {track.map((w) => <span>{w}</span>)}
+    <h1>
+      <span class="line">
+        <span class="w" style="--d:0"><span>I</span></span>
+        <span class="w" style="--d:1"><span>build</span></span>
+        <span class="w" style="--d:2"><span>ai</span></span>
       </span>
-    </span>
-  </h1>
+      <span class="line">
+        <span class="w w--em" style="--d:3">
+          <span>
+            products
+            <svg class="swoosh" viewBox="0 0 300 22" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M3 15C62 6 128 3 297 9" />
+            </svg>
+          </span>
+        </span>
+        <span class="w" style="--d:4"><span>that</span></span>
+        <span class="w" style="--d:5"><span>ship.</span></span>
+      </span>
+    </h1>
 
-  <p class="hero-sub">{SITE.heroSub}</p>
-
-  <figure class="plate plate--portrait ticks">
-    <Lattice />
-    <figcaption>fig. 01 — interference field</figcaption>
-  </figure>
-
-  <dl class="now-strip">
-    {SITE.now.map((row) => (
-      <div>
-        <dt>{row.k}</dt>
-        <dd>{row.v}</dd>
-      </div>
-    ))}
-  </dl>
+    <div class="hero-foot">
+      <p class="hero-intro">
+        {words[0]} {words[1]} — engineer working between models and the people
+        who have to use them.
+      </p>
+      <span class="micro">Scroll ↓</span>
+    </div>
+  </div>
 </section>

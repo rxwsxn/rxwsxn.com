@@ -15,7 +15,7 @@ const blog = defineCollection({
 
 /**
  * Work entries. These are no longer a standalone page — they render in the
- * "details" section of /about.
+ * /work page.
  */
 const work = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/work' }),

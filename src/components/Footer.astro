@@ -1,16 +1,118 @@
 ---
 import { SITE } from '../site.config';
-import VisitorCounter from './VisitorCounter.astro';
+import SocialIcon from './SocialIcon.astro';
+import Sunflowers from './Sunflowers.astro';
 
+/**
+ * Footer: the address at display size, a sunflower field that leans with the
+ * pointer, the name at closing size, then the meta rule.
+ * Contact lives here — there is no contact page.
+ */
 const year = new Date().getFullYear();
+
+const email = SITE.links.find((l) => l.label === 'email');
+const mailto = email ? email.href.replace(/^mailto:/, '') : SITE.email;
+
+/** only these four, in this order */
+const KEEP = ['x', 'linkedin', 'instagram', 'youtube'];
+const socials = KEEP.map((k) => SITE.links.find((l) => l.label === k)).filter(
+  (l): l is { label: string; href: string } => Boolean(l),
+);
+
+const siteNav = [
+  { label: 'work', href: '/work' },
+  { label: 'writing', href: '/blog' },
+];
 ---
 
 <footer class="site-footer">
-  <div class="footer-inner footer-line">
-    <span class="footer-left">© {SITE.name} {year}</span>
-    <span class="footer-right">
-      <span class="live-dot" aria-hidden="true"></span>
-      <VisitorCounter />
-    </span>
+  <div class="wrap">
+    <div class="foot-hello">
+      <span class="micro">Get in touch</span>
+      <a class="foot-mail" href={`mailto:${mailto}`}>
+        {mailto}<span aria-hidden="true">↗</span>
+      </a>
+      <span class="serif">Say hello — I usually reply within a day.</span>
+    </div>
+
+    <div class="foot-grid">
+      <div class="foot-col foot-col--wide">
+        <span class="micro">Index</span>
+        {siteNav.map((n, i) => (
+          <a href={n.href} data-split>
+            <span class="n">{String(i + 1).padStart(2, '0')}</span>
+            {n.label}
+          </a>
+        ))}
+        <a href="/rss.xml" data-split>
+          <span class="n">03</span>
+          rss
+        </a>
+      </div>
+
+      <div class="foot-col">
+        <span class="micro">Social</span>
+        <ul class="foot-social">
+          {
+            socials.map((l) => (
+              <li>
+                <a href={l.href} rel="me noopener" target="_blank" aria-label={l.label} title={l.label}>
+                  <SocialIcon name={l.label} />
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <p class="foot-closer">Raushan <em>Kumar</em></p>
+  </div>
+
+  <!-- the flowers stand on the rule above the meta line -->
+  <div class="field">
+    <Sunflowers />
+  </div>
+
+  <div class="wrap">
+    <div class="footer-meta">
+      <span>© {year} {SITE.name}</span>
+      <span class="place">
+        <span class="flag" aria-hidden="true">🇮🇳</span>
+        <span>Vaishali</span>
+        <span class="dot" aria-hidden="true">·</span>
+        <time id="clock" datetime="">--:--</time>
+      </span>
+      <button class="top" id="top" type="button">Back to top ↑</button>
+    </div>
   </div>
 </footer>
+
+<script>
+  (() => {
+    const clock = document.getElementById('clock');
+    if (!clock) return;
+
+    const fmt = new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Kolkata',
+    });
+
+    const tick = () => {
+      const now = new Date();
+      clock.textContent = fmt.format(now);
+      clock.setAttribute('datetime', now.toISOString());
+    };
+
+    tick();
+    setInterval(tick, 15_000);
+
+    document.getElementById('top')?.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  })();
+</script>

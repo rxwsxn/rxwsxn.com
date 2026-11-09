@@ -1,0 +1,21 @@
+# Cloudflare Pages — project configuration
+#
+# Used by `wrangler pages dev` and by direct uploads
+# (`npx wrangler pages deploy dist`). When the project is connected to Git,
+# Cloudflare reads the build settings from the dashboard instead, but keeping
+# them here means the two stay honest with each other.
+
+name = "rxwsxn-com"
+compatibility_date = "2025-01-01"
+pages_build_output_dir = "dist"
+
+# Pages Functions live in ./functions and are picked up automatically:
+#   functions/api/links.js    /api/links      (needs KV binding LINKS)
+#   functions/api/publish.js  /api/publish    (needs STUDIO_TOKEN, GITHUB_*)
+#   functions/api/posts.js    /api/posts      (same)
+#   functions/api/upload.js   /api/upload     (same)
+#   functions/api/preview.js  /api/preview    (needs LINKS_TOKEN)
+
+# Bindings and variables are NOT stored here — set them in the dashboard
+# (Workers & Pages → your project → Settings → Functions / Environment
+# variables) so secrets never land in the repository. See DEPLOY.md step 4.

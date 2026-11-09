@@ -7,57 +7,112 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
   .slice(0, 3);
 
-const hub = [
-  { href: '/blog', title: 'blog', desc: 'dated notes — mostly ai, product, and building.' },
-  { href: '/about', title: 'about', desc: 'who i am, and how i work.' },
-  { href: '/contact', title: 'contact', desc: 'email, github, and the fastest way to reach me.' },
+const work = (await getCollection('work'))
+  .sort((a, b) => a.data.order - b.data.order)
+  .slice(0, 4);
+
+const caps = [
+  {
+    title: 'Product engineering',
+    body: 'Models out of notebooks and into products: retrieval, agents, copilots, and the multi-tenant plumbing under them.',
+  },
+  {
+    title: 'Evaluation',
+    body: 'Evals that catch a regression before a user does, with datasets and feedback loops that stay honest.',
+  },
+  {
+    title: 'Interfaces',
+    body: 'The surface where the model meets a person — streaming, latency, failure states, and copy that explains itself.',
+  },
 ];
+
+const pad = (n: number) => String(n).padStart(2, '0');
 ---
 
 <Base>
   <Hero />
 
-  <section class="section wrap">
+  <section class="section wrap" id="work">
     <div class="sec-head">
-      <span class="sec-num">01</span>
-      <span class="label">explore</span>
+      <span class="count">(01)</span>
+      <h2>Work</h2>
+      <p class="serif">Selected builds, mostly in production.</p>
     </div>
-    <div class="hub">
-      {
-        hub.map((h) => (
-          <a class="hub-card glass" href={h.href}>
-            <span class="hub-title">{h.title}</span>
-            <span class="hub-desc">{h.desc}</span>
-          </a>
-        ))
-      }
-    </div>
-  </section>
 
-  <section class="section wrap">
-    <div class="sec-head">
-      <span class="sec-num">02</span>
-      <span class="label">latest writing</span>
-    </div>
     {
-      posts.length > 0 ? (
+      work.length > 0 ? (
         <ul class="list">
-          {posts.map((post) => (
-            <li>
-              <div class="post-meta">
-                <a class="post-title" href={`/blog/${post.id}/`}>
-                  {post.data.title}
+          {work.map((item, i) => (
+            <li class="reveal">
+              <span class="idx">{pad(i + 1)}</span>
+              <div class="row-main">
+                <a class="work-title" href="/work">
+                  {item.data.title}
                 </a>
-                <span class="post-date">{post.data.date.toISOString().slice(0, 10)}</span>
+                <p class="work-summary">{item.data.summary}</p>
+                <div class="work-meta">
+                  {item.data.org && <span>{item.data.org}</span>}
+                  {item.data.stack.length > 0 && <span>{item.data.stack.join(' · ')}</span>}
+                </div>
               </div>
-              {post.data.summary && <p class="post-excerpt">{post.data.summary}</p>}
+              <span class="post-date">{item.data.period}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p class="empty">no posts yet.</p>
+        <p class="empty">Nothing here yet.</p>
       )
     }
-    <p class="small"><a href="/blog">all posts →</a></p>
+  </section>
+
+  <section class="section wrap">
+    <div class="sec-head">
+      <span class="count">(02)</span>
+      <h2>Capabilities</h2>
+      <p class="serif">What I'm actually hired for.</p>
+    </div>
+
+    <ul class="list">
+      {
+        caps.map((c, i) => (
+          <li class="reveal">
+            <span class="idx">{pad(i + 1)}</span>
+            <div class="row-main">
+              <span class="work-title">{c.title}</span>
+              <p class="work-summary">{c.body}</p>
+            </div>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="section wrap" id="writing">
+    <div class="sec-head">
+      <span class="count">(03)</span>
+      <h2>Writing</h2>
+      <p class="serif">Notes from the margins.</p>
+    </div>
+
+    {
+      posts.length > 0 ? (
+        <ul class="list">
+          {posts.map((post, i) => (
+            <li class="reveal">
+              <span class="idx">{pad(i + 1)}</span>
+              <div class="row-main">
+                <a class="post-title" href={`/blog/${post.id}/`}>
+                  {post.data.title}
+                </a>
+                {post.data.summary && <p class="post-excerpt">{post.data.summary}</p>}
+              </div>
+              <span class="post-date">{post.data.date.toISOString().slice(0, 10)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="empty">No posts yet — the first one is on its way.</p>
+      )
+    }
   </section>
 </Base>

@@ -37,32 +37,38 @@ const jsonLd = [
   jsonLd={jsonLd}
 >
   <div class="page-head wrap">
+    <span class="micro">Notes from the margins</span>
     <h1>blog</h1>
     <p class="sub">dated notes. mostly ai, product, and building.</p>
   </div>
 
   <section class="section wrap">
-    {posts.length === 0 ? (
-      <p class="empty">no posts yet — the first one is on its way.</p>
-    ) : (
-      <ul class="list">
-        {posts.map((post) => (
-          <li>
-            <div class="post-meta">
-              <a class="post-title" href={`/blog/${post.id}/`}>{post.data.title}</a>
-              <span class="post-date">{post.data.date.toISOString().slice(0, 10)}</span>
-            </div>
-            {post.data.summary && <p class="post-excerpt">{post.data.summary}</p>}
-            {post.data.tags.length > 0 && (
-              <div class="post-tags">
-                {post.data.tags.map((t) => (
-                  <span>#{t}</span>
-                ))}
+    {
+      posts.length === 0 ? (
+        <p class="empty">no posts yet — the first one is on its way.</p>
+      ) : (
+        <ul class="list">
+          {posts.map((post, i) => (
+            <li class="reveal">
+              <span class="idx">{String(i + 1).padStart(2, '0')}</span>
+              <div class="row-main">
+                <a class="post-title" href={`/blog/${post.id}/`}>
+                  {post.data.title}
+                </a>
+                {post.data.summary && <p class="post-excerpt">{post.data.summary}</p>}
+                {post.data.tags.length > 0 && (
+                  <div class="post-tags">
+                    {post.data.tags.map((t) => (
+                      <span>#{t}</span>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </li>
-        ))}
-      </ul>
-    )}
+              <span class="post-date">{post.data.date.toISOString().slice(0, 10)}</span>
+            </li>
+          ))}
+        </ul>
+      )
+    }
   </section>
 </Base>

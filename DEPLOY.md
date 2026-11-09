@@ -5,6 +5,56 @@ This is a static Astro site: build command `npm run build`, output directory
 
 ---
 
+## Do this now — six steps
+
+1. **Drop this build in and check it locally**
+
+   ```bash
+   unzip rxwsxn-mono.zip -d rxwsxn-mono && cd rxwsxn-mono
+   nvm use            # or: nvm install 20
+   bash scripts/preflight.sh
+   ```
+
+   Installs, builds, verifies `dist/` and all five API endpoints. If it stops, it
+   says what to fix.
+
+2. **Commit and push** — if the Pages project is Git-connected, this deploys.
+
+   ```bash
+   git add -A && git commit -m "studio, live publishing, sunflower field" && git push
+   ```
+
+3. **Environment variables** — Workers & Pages → `rxwsxn-com` → Settings →
+   Environment variables, in **Production** *and* **Preview**:
+
+   | name | value |
+   | --- | --- |
+   | `NODE_VERSION` | `20` |
+   | `LINKS_TOKEN` | `openssl rand -hex 32` |
+   | `STUDIO_TOKEN` | `openssl rand -hex 32` |
+   | `GITHUB_TOKEN` | fine-grained PAT → Contents: Read and write |
+   | `GITHUB_REPO` | `rxwsxn/rxwsxn.com` |
+   | `GITHUB_BRANCH` | `main` |
+
+4. **KV binding** — Settings → Functions → KV namespace bindings: variable name
+   `LINKS`, namespace `rxwsxn-links`. The old `VISITS` namespace is unused now.
+
+5. **Redeploy.** Variables only apply to new deployments: *Deployments → Retry
+   deployment*, or push an empty commit.
+
+6. **Verify** — `/`, `/work`, `/blog`, `/studio`. In the studio, paste
+   `STUDIO_TOKEN` → **Check connection** → should read `connected · N posts`.
+
+**No Git connection?** Build locally, then upload the folder:
+
+```bash
+bash scripts/preflight.sh
+npx wrangler pages deploy dist --project-name rxwsxn-com
+```
+
+Functions in `./functions` go up with it; steps 3 and 4 still apply.
+
+
 ## Option A — Git integration (recommended)
 
 Auto-deploys on every push. Best if you'll keep editing.
@@ -52,20 +102,6 @@ NODE_VERSION = 20
 
 Save and Deploy. Every push to `main` redeploys; other branches get preview URLs.
 
-### 4b. Enable the visitor counter
-
-The footer counter is served by `functions/api/visit.js` and needs one KV
-namespace:
-
-1. Workers & Pages → **KV** → **Create a namespace** (name it e.g. `rxwsxn-visits`).
-2. Your Pages project → **Settings** → **Functions** → **KV namespace bindings**
-   → **Add binding**. Variable name: **`VISITS`**, namespace: the one you made.
-3. Redeploy. The footer then shows `visitor #N · <ip> · 🇮🇳`.
-
-Until this is done the function still returns the IP and country flag — the
-number is just omitted, and the browser console logs a warning telling you the
-`VISITS` binding is missing.
-
 ### 4c. Enable the /links editor
 
 `/links` is an unlisted link-in-bio page, and `/links/edit` is a live editor for
@@ -76,8 +112,7 @@ nothing on the site links to either.
 It needs two more things:
 
 1. **A KV namespace for the links.** Same as 4b, but bind it as **`LINKS`**
-   (a separate namespace, e.g. `rxwsxn-links`, so link edits and the visit
-   count don't share one).
+   (a separate namespace, e.g. `rxwsxn-links`).
 2. **An access token.** Settings → **Environment variables** → add
    `LINKS_TOKEN` with a long random value (e.g. `openssl rand -hex 32`). Set it
    for Production *and* Preview.
@@ -87,6 +122,56 @@ the token is kept in that browser's localStorage.
 
 The token is required for every write and for the preview proxy. Without it the
 editor can't save anything and `/api/preview` returns 401. Never commit it.
+
+### 4d. Enable live publishing (the studio)
+
+`/studio` writes posts straight into the repository through the GitHub Contents
+API. Cloudflare Pages is already connected to that repo, so each publish is a
+commit that triggers a build — the post is live in about a minute. No database,
+no SSR.
+
+**1. Make a GitHub token.** github.com → Settings → Developer settings →
+Fine-grained tokens → *Generate new token*:
+
+- Repository access: **Only select repositories** → `rxwsxn/rxwsxn.com`
+- Permissions → Repository permissions → **Contents: Read and write**
+- Expiration: whatever you're comfortable rotating
+
+**2. Add four variables** in Workers & Pages → your project → **Settings** →
+**Environment variables**, for **Production** *and* **Preview**:
+
+| Variable        | Value                                   |
+| --------------- | --------------------------------------- |
+| `STUDIO_TOKEN`  | a long random string (`openssl rand -hex 32`) |
+| `GITHUB_TOKEN`  | the fine-grained token from step 1      |
+| `GITHUB_REPO`   | `rxwsxn/rxwsxn.com`                     |
+| `GITHUB_BRANCH` | `main` (optional)                       |
+
+**3. Redeploy**, open `/studio`, paste the `STUDIO_TOKEN` into the token field
+and hit **Use**. *Load from repo* lists what's already there; **Publish** writes
+the markdown and the 1200×630 card in one commit.
+
+The token lives in that browser's `localStorage`. It is never in the page, and
+every write is rejected without it.
+
+**If it won't publish**, the status line under *Live · repository* names the
+cause:
+
+| status line says | what it means | fix |
+| --- | --- | --- |
+| `no /api route — Functions are not deployed yet` | the deployed build predates the studio API, or you're on `astro dev`, which never runs Functions | deploy this build; test publishing on the live URL |
+| `server not configured — add STUDIO_TOKEN…` | the Functions are live but the env vars are missing | add all three, then **redeploy** (vars only apply to new deployments) |
+| `token rejected — check STUDIO_TOKEN` | the token in the browser doesn't match the env var | paste it again |
+| `github refused the write — …` | the PAT lacks **Contents: Read and write**, or `GITHUB_REPO` is wrong | fix the token/repo |
+| `network — the request never left the browser` | offline, or a blocker | retry |
+
+**Images** go through the same token: `/api/upload` commits them to
+`public/images/<slug>/` and hands back the path to paste into markdown. Nothing
+extra to configure.
+
+**Publishing locally still works** — writing a `.md` in `src/content/blog/` and
+pushing to `main` is the same pipeline the studio uses, just with you as the
+author of the commit.
 
 ### 5. Custom domain
 Project → **Custom domains** → **Set up a custom domain** → `rxwsxn.com`

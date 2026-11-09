@@ -2,7 +2,7 @@
 /**
  * Generative interference lattice — a pixel grid whose brightness follows three
  * summed sine waves, so it drifts like an interference pattern.
- * Lives on /about now; drop it anywhere with <Lattice />.
+ * Currently unused — drop it anywhere with <Lattice />.
  */
 ---
 
@@ -42,7 +42,7 @@
               Math.sin((i + j) * 0.22 + t * 0.0007)) /
             3;
           if (v <= 0.04) continue;
-          ctx.fillStyle = 'rgba(0,255,136,' + (v * 0.85).toFixed(3) + ')';
+          ctx.fillStyle = 'rgba(255,45,149,' + (v * 0.85).toFixed(3) + ')';
           ctx.fillRect(i * cell + 1, j * cell + 1, cell - 2, cell - 2);
         }
       }

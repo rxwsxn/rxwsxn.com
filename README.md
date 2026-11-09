@@ -1,8 +1,9 @@
 # rxwsxn.com
 
-Personal site for **Raushan Kumar** (`ai + product`, Bangalore / remote).
-Always-dark, Liquid Glass surfaces over a drifting colour field, with a
-geometric / pixel backdrop. Astro static output, one hand-written stylesheet,
+Personal site for **Raushan Kumar** (`ai + product`). Always-dark, Liquid
+Glass surfaces over a drifting colour field, with a full-page animated backdrop
+that cycles through six mathematical systems (Lorenz, Rössler, Aizawa, Thomas,
+Halvorsen, a Lissajous knot). Astro static output, one hand-written stylesheet,
 markdown content collections.
 
 ## Run it
@@ -25,6 +26,8 @@ src/
   layouts/Base.astro    # <head>, meta, OG/Twitter, JSON-LD, header + footer
   components/
     Header.astro  Footer.astro  CopyEmail.astro  Hero.astro
+    Backdrop.astro        # full-page attractor backdrop (one fixed canvas)
+    Lattice.astro         # the interference-field figure in the hero
   content/
     blog/*.md(x)          # dated notes -> /blog/<slug>
     work/*.md(x)          # work entries -> the /about "details" section
@@ -73,16 +76,57 @@ Commit the regenerated PNGs. SEO meta (Open Graph, Twitter, canonical, JSON-LD)
 is emitted from `src/layouts/Base.astro`; identity defaults live in
 `src/site.config.ts`.
 
-## Visitor counter
+## Studio (writing)
 
-The footer shows a live line — visitor number, a masked IP and the country —
-served by a Cloudflare Pages Function at `functions/api/visit.js`. The count
-lives in a KV namespace bound as `VISITS` (see DEPLOY.md). Without the binding
-the number is omitted; in plain `astro dev` the function doesn't run, so the
-whole line stays hidden rather than showing anything fake.
+`/studio` is an unlisted authoring page — no nav entry, `noindex`, excluded from
+the sitemap. Reach it by going to `/studio` directly, or press **g** then **s**
+anywhere on the site (ignored while typing in a field). It runs entirely in the browser, so it needs no backend, no token
+and no KV namespace.
 
-Privacy: the full IP never leaves the edge — the function reduces it to a
-partial address, and it's only ever shown back to the visitor themselves.
+Type a title and it derives the slug; it also produces:
+
+- the frontmatter (`title`, `date`, `summary`, `tags`, `draft`)
+- reading time and word count
+- the canonical URL, `/blog/<slug>/`
+- a live preview of the rendered markdown
+- a 1200×630 social card, drawn on a canvas in the site's palette
+
+**Images.** Drag a file onto the body field, paste one from the clipboard, or
+hit **+ image**. It's committed to `public/images/<slug>/` by `/api/upload` and
+the markdown (`![name](/images/<slug>/name.png)`) is inserted where the cursor
+was. PNG, JPEG, WebP, GIF and AVIF, up to 6MB. Plain markdown images work too —
+anything already in `public/` is served at its path.
+
+**Publishing.** With a `STUDIO_TOKEN` in the token field, **Publish** posts the
+markdown and the card to `/api/publish`, which commits both to the repo through
+the GitHub Contents API. Pages is connected to that repo, so the commit triggers
+a build and the post goes live in about a minute. `functions/api/posts.js` backs
+*Load from repo* and the post list; delete is available there too.
+
+Drafts are kept in `localStorage` as well (save, reopen, delete), and
+"Download .md" writes the file for the plain git workflow — write locally,
+commit, push, same result.
+
+Run `npm run images` instead of exporting cards one by one if you'd rather let
+`scripts/generate-og.py` draw every post's card from its frontmatter.
+
+Setup for the token and the environment variables is in `DEPLOY.md` step 4d.
+
+## Backdrop
+
+`src/components/Backdrop.astro` draws the page background: one fixed canvas at
+`z-index: -2`, sitting above the page colour and below the drifting gradient
+field (`body::before`) and all content.
+
+Each system is integrated with RK4 (or sampled parametrically, for the
+Lissajous knot), normalised to a unit box, then slowly rotated and projected
+with a weak perspective. The trace draws itself point by point, holds while it
+turns, fades, and hands over to the next system — roughly 17s each, so the full
+cycle is about 1m40s.
+
+Adding a system is one entry in the `DEFS` array: a derivative function, a
+start point, a step size and a sample count. `prefers-reduced-motion` renders
+the first figure once and stops.
 
 ## Deploy
 

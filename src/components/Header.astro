@@ -1,102 +1,79 @@
 ---
 import { SITE } from '../site.config';
 
-const path = Astro.url.pathname;
+/**
+ * Header: compact wordmark, two destinations, and the day/night switch with a
+ * sunflower knob.
+ */
 const nav = [
-  { href: '/', label: 'home' },
-  { href: '/blog', label: 'blog' },
-  { href: '/about', label: 'about' },
-  { href: '/contact', label: 'contact' },
+  { label: 'work', href: '/work' },
+  { label: 'writing', href: '/blog' },
 ];
-
-const isCurrent = (href: string) =>
-  href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
 ---
 
 <header class="site-header">
-  <div class="header-inner">
-    <div class="brand">
-      <a class="wordmark" href="/">{SITE.wordmark}</a>
-      <span class="tagline">{SITE.tagline}</span>
-    </div>
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label={`${SITE.name} — home`}>
+      <span class="wordmark">raushan</span>
+    </a>
 
-    <nav class="nav" aria-label="primary">
-      {nav.map((item) => (
-        <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
-          [{item.label}]
-        </a>
-      ))}
+    <nav class="nav" aria-label="Main">
+      {nav.map((n) => <a href={n.href} data-split>{n.label}</a>)}
+
+      <button
+        class="theme"
+        id="theme"
+        type="button"
+        aria-label="Switch to light mode"
+        aria-pressed="false"
+        title="Day / night"
+      >
+        <span class="knob">
+          <svg class="petals" viewBox="0 0 24 24" aria-hidden="true">
+            {
+              Array.from({ length: 9 }).map((_, i) => (
+                <ellipse
+                  cx="12"
+                  cy="5.6"
+                  rx="2.3"
+                  ry="4.6"
+                  transform={`rotate(${i * 40} 12 12)`}
+                />
+              ))
+            }
+            <circle cx="12" cy="12" r="3.7" class="core" />
+          </svg>
+        </span>
+      </button>
     </nav>
-
-    <button
-      class="menu-btn"
-      type="button"
-      aria-label="open menu"
-      aria-expanded="false"
-      aria-controls="site-menu"
-    >
-      <span class="menu-bars" aria-hidden="true"><i></i><i></i><i></i></span>
-    </button>
   </div>
-
-  <!-- iPhone-style sheet: phones + tablets only. Lives outside .header-inner so the
-       glass backdrop-filter there does not become its containing block. -->
-  <nav class="menu-panel" id="site-menu" aria-label="mobile">
-    <span class="menu-eyebrow">menu</span>
-    {nav.map((item) => (
-      <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
-        {item.label}
-      </a>
-    ))}
-    <span class="menu-foot">{SITE.location}</span>
-  </nav>
 </header>
 
 <script>
   (() => {
-    const btn = document.querySelector('.menu-btn');
-    const panel = document.getElementById('site-menu');
-    if (!(btn instanceof HTMLElement) || !(panel instanceof HTMLElement)) return;
+    const root = document.documentElement;
+    const btn = document.getElementById('theme');
+    if (!(btn instanceof HTMLButtonElement)) return;
 
-    const setOpen = (open: boolean) => {
-      document.body.classList.toggle('menu-open', open);
-      btn.setAttribute('aria-expanded', String(open));
-      btn.setAttribute('aria-label', open ? 'close menu' : 'open menu');
+    const meta = document.querySelector('meta[name="theme-color"]');
+
+    const apply = (t: string) => {
+      root.dataset.theme = t;
+      const light = t === 'light';
+      btn.setAttribute('aria-pressed', String(light));
+      btn.setAttribute('aria-label', light ? 'Switch to night' : 'Switch to day');
+      if (meta) meta.setAttribute('content', light ? '#f2efe9' : '#000000');
+      try {
+        localStorage.setItem('rxwsxn-theme', t);
+      } catch {
+        /* private mode */
+      }
     };
-    const isOpen = () => document.body.classList.contains('menu-open');
 
-    btn.addEventListener('click', () => setOpen(!isOpen()));
+    apply(root.dataset.theme === 'light' ? 'light' : 'dark');
 
-    // tapping a link closes the sheet
-    panel.addEventListener('click', (e) => {
-      const t = e.target;
-      if (t instanceof Element && t.closest('a')) setOpen(false);
+    btn.addEventListener('click', () => {
+      apply(root.dataset.theme === 'dark' ? 'light' : 'dark');
     });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && isOpen()) setOpen(false);
-    });
-
-    // if the viewport grows past the breakpoint, drop back to the inline nav
-    const wide = window.matchMedia('(min-width: 901px)');
-    if (wide.addEventListener) {
-      wide.addEventListener('change', (e) => {
-        if (e.matches) setOpen(false);
-      });
-    }
-
-    // the sheet must clear the floating header, whose height changes with width —
-    // publish its bottom edge as --menu-top and let the CSS pad against it
-    const header = document.querySelector('.site-header');
-    const sync = () => {
-      if (!header) return;
-      document.documentElement.style.setProperty(
-        '--menu-top',
-        Math.round(header.getBoundingClientRect().bottom) + 'px',
-      );
-    };
-    sync();
-    window.addEventListener('resize', sync);
-    window.addEventListener('load', sync);
   })();
 </script>

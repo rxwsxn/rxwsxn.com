@@ -1,56 +1,59 @@
 ---
 import Base from '../layouts/Base.astro';
-import SocialIcon from '../components/SocialIcon.astro';
+import Backdrop from '../components/Backdrop.astro';
 import { SITE } from '../site.config';
 
 /**
- * Unlisted link-in-bio page.
- *
- * Deliberately not referenced anywhere on the site: no nav entry, no footer
- * link, and excluded from the sitemap in astro.config.mjs. It is also noindex,
- * so it stays out of search results. Share the URL directly.
+ * Unlisted link-in-bio page. Not linked from anywhere, excluded from the
+ * sitemap, noindex. Share the URL directly.
  */
 const links = SITE.links;
-
-// SITE.links calls it 'email'; the icon set calls it 'mail'
-const iconFor = (label: string) => (label === 'email' ? 'mail' : label);
+const email = SITE.links.find((l) => l.label === 'email');
+const mailto = email ? email.href.replace(/^mailto:/, '') : SITE.email;
+const socials = links.filter((l) => l.label !== 'email');
 ---
 
-<Base
-  title="links"
-  description={`Everywhere ${SITE.name} is.`}
-  image="/og.png"
-  noindex
-  bare
->
+<Base title="links" description={`Everywhere ${SITE.name} is.`} image="/og.png" noindex bare>
+  <Backdrop />
+
   <div class="lt">
+    <div class="lt-bar">
+      <span class="lt-badge">{SITE.url.replace('https://', '')}</span>
+      <a class="lt-hi" href={`mailto:${mailto}`}>say hi ↗</a>
+    </div>
+
     <header class="lt-head">
-      <span class="lt-avatar" aria-hidden="true">rk</span>
+      <span class="micro">{SITE.jobTitle}</span>
       <h1 class="lt-name">{SITE.name}</h1>
-      <p class="lt-bio">{SITE.jobTitle} · {SITE.location}</p>
+      <p class="lt-bio">Patterns, pixels &amp; the space between.</p>
     </header>
 
-    <ul class="lt-logos">
-      {links.map((l) => (
-        <li>
-          <a href={l.href} rel="me noopener" aria-label={l.label} title={l.label}>
-            <SocialIcon name={iconFor(l.label)} brand />
+    <a class="lt-mail" href={`mailto:${mailto}`}>
+      <span class="micro">email</span>
+      <span class="lt-mail-addr">{mailto}</span>
+      <span class="lt-mail-arrow" aria-hidden="true">↗</span>
+    </a>
+
+    <div class="lt-social">
+      {
+        socials.map((l) => (
+          <a class="pill" href={l.href} rel="me noopener" target="_blank">
+            {l.label} ↗
           </a>
-        </li>
-      ))}
-    </ul>
+        ))
+      }
+    </div>
 
     <ul class="lt-cards" id="lt-cards" hidden></ul>
 
     <p class="lt-foot">
-      <a href="/">{SITE.url.replace('https://', '')}</a>
+      <a href="/">← {SITE.url.replace('https://', '')}</a>
     </p>
   </div>
 </Base>
 
 <script>
   // Custom links live in KV, not in the build, so they're fetched at runtime.
-  // The list stays hidden until it has something in it — no empty flash.
   (() => {
     const wrap = document.getElementById('lt-cards');
     if (!wrap) return;
@@ -63,6 +66,8 @@ const iconFor = (label: string) => (label === 'email' ? 'mail' : label);
 
         for (const l of links) {
           const li = document.createElement('li');
+          li.className = 'lt-card';
+
           const a = document.createElement('a');
           a.href = l.url;
           a.target = '_blank';
@@ -91,7 +96,12 @@ const iconFor = (label: string) => (label === 'email' ? 'mail' : label);
           desc.textContent = l.description || '';
           body.append(site, title, desc);
 
-          a.appendChild(body);
+          const arrow = document.createElement('span');
+          arrow.className = 'lt-card-arrow';
+          arrow.setAttribute('aria-hidden', 'true');
+          arrow.textContent = '↗';
+
+          a.append(body, arrow);
           li.appendChild(a);
           wrap.appendChild(li);
         }
@@ -105,150 +115,136 @@ const iconFor = (label: string) => (label === 'email' ? 'mail' : label);
 
 <style>
   .lt {
-    max-width: 560px;
+    position: relative;
+    z-index: 1;
+    width: min(620px, calc(100% - 48px));
     margin-inline: auto;
-    padding: 64px 20px 64px;
+    padding: 44px 0 64px;
   }
 
-  .lt-head {
-    text-align: center;
-    margin-bottom: 26px;
-  }
-  .lt-avatar {
-    display: inline-flex;
+  .lt-bar {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    width: 84px;
-    height: 84px;
-    border-radius: 50%;
-    font-size: 26px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--accent);
-    background: var(--glass);
-    -webkit-backdrop-filter: blur(22px) saturate(160%);
-    backdrop-filter: blur(22px) saturate(160%);
-    border: 1px solid var(--glass-border);
-    box-shadow: inset 0 1px 0 var(--glass-hi), 0 10px 30px rgba(0, 0, 0, 0.45);
-  }
-  .lt-name {
-    margin: 18px 0 6px;
-    font-size: 24px;
-    letter-spacing: -0.01em;
-  }
-  .lt-bio {
-    margin: 0;
-    color: var(--muted);
-    font-size: 14px;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 40px;
   }
 
-  /* the socials, as logos: one or two lines, real brand colours */
-  .lt-logos {
-    list-style: none;
+  .lt-badge {
+    font-size: 10px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .lt-hi {
+    font-size: 10px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--text);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 2px;
+  }
+  .lt-hi:hover { border-color: var(--text); }
+
+  .lt-head { margin-bottom: 28px; }
+  .lt-head .micro { margin-bottom: 12px; }
+
+  .lt-name {
     margin: 0;
-    padding: 0;
+    font-size: clamp(38px, 9vw, 64px);
+    font-weight: 800;
+    line-height: .92;
+    letter-spacing: -.055em;
+  }
+
+  .lt-bio {
+    font: italic 21px/1.4 var(--serif);
+    color: var(--dim);
+    margin: 14px 0 0;
+  }
+
+  .lt-mail {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    transition: padding-left .25s var(--ease);
+  }
+  .lt-mail:hover { padding-left: 10px; }
+
+  .lt-mail-addr {
+    font-size: 15px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+  .lt-mail-arrow { margin-left: auto; color: var(--dim); }
+
+  .lt-social {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-  }
-  .lt-logos a {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
-    background: var(--glass);
-    -webkit-backdrop-filter: blur(22px) saturate(160%);
-    backdrop-filter: blur(22px) saturate(160%);
-    border: 1px solid var(--glass-border);
-    box-shadow: inset 0 1px 0 var(--glass-hi), 0 8px 24px rgba(0, 0, 0, 0.35);
-    transition: transform 0.16s ease, border-color 0.16s ease;
-  }
-  .lt-logos a:hover,
-  .lt-logos a:focus-visible {
-    transform: translateY(-3px);
-    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  }
-  .lt-logos a:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-  }
-  .lt-logos :global(.social-icon) {
-    width: 21px;
-    height: 21px;
-    display: block;
+    gap: 20px;
+    margin-top: 22px;
   }
 
-  .lt-foot {
-    margin: 34px 0 0;
-    text-align: center;
-    font-size: 13px;
-  }
+  .lt-foot { margin: 44px 0 0; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
+  .lt-foot a { color: var(--dimmer); }
+  .lt-foot a:hover { color: var(--text); }
 
-  /* custom links, saved from /links/edit.
-     These nodes are built in JS, so they never receive Astro's scoping
-     attribute — the whole selector has to be :global() to match them. */
+  /* ---- KV-backed cards (built in JS, hence :global) ---- */
   :global(.lt-cards) {
     list-style: none;
-    margin: 26px 0 0;
+    margin: 40px 0 0;
     padding: 0;
-    display: grid;
-    gap: 12px;
+    border-top: 1px solid var(--line);
   }
-  :global(.lt-cards a) {
+  :global(.lt-card) { border-bottom: 1px solid var(--line); }
+  :global(.lt-card a) {
     display: flex;
-    gap: 14px;
     align-items: center;
-    padding: 12px;
-    border-radius: 16px;
-    color: var(--fg);
-    background: var(--glass);
-    -webkit-backdrop-filter: blur(22px) saturate(160%);
-    backdrop-filter: blur(22px) saturate(160%);
-    border: 1px solid var(--glass-border);
-    box-shadow: inset 0 1px 0 var(--glass-hi), 0 8px 24px rgba(0, 0, 0, 0.35);
-    transition: transform 0.16s ease, border-color 0.16s ease;
+    gap: 16px;
+    padding: 18px 0;
+    color: var(--text);
+    transition: padding-left .25s var(--ease);
   }
-  :global(.lt-cards a:hover),
-  :global(.lt-cards a:focus-visible) {
-    transform: translateY(-2px);
-    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-    text-decoration: none;
-  }
-  :global(.lt-cards a:focus-visible) {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-  }
-  :global(.lt-cards img) {
-    width: 92px;
-    height: 66px;
+  :global(.lt-card a:hover) { padding-left: 12px; }
+  :global(.lt-card a:focus-visible) { outline: 1px solid var(--text); outline-offset: 4px; }
+  :global(.lt-card img) {
+    width: 84px;
+    height: 60px;
     object-fit: cover;
-    border-radius: 10px;
-    border: 1px solid var(--glass-border);
-    background: #0b0b0b;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
     flex: 0 0 auto;
+    filter: grayscale(1);
+    transition: filter .25s ease;
   }
+  :global(.lt-card a:hover img) { filter: grayscale(0); }
   :global(.lt-card-body) {
-    flex: 1 1 160px;
+    flex: 1 1 150px;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
   }
   :global(.lt-card-site) {
-    color: var(--muted2);
-    font-size: 11px;
+    color: var(--dimmer);
+    font-size: 10px;
+    letter-spacing: .18em;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
   }
   :global(.lt-card-title) {
-    font-size: 15px;
-    line-height: 1.3;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -.025em;
+    line-height: 1.25;
   }
   :global(.lt-card-desc) {
-    color: var(--muted);
+    color: var(--dim);
     font-size: 13px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -256,20 +252,11 @@ const iconFor = (label: string) => (label === 'email' ? 'mail' : label);
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .lt-foot a {
-    color: var(--muted2);
-  }
-  .lt-foot a:hover {
-    color: var(--accent);
-  }
+  :global(.lt-card-arrow) { flex: 0 0 auto; color: var(--dim); }
+  :global(.lt-card a:hover .lt-card-arrow) { color: var(--text); }
 
   @media (max-width: 420px) {
-    .lt { padding: 44px 16px 52px; }
-    .lt-avatar { width: 72px; height: 72px; font-size: 22px; }
-    .lt-name { font-size: 21px; }
-    .lt-logos { gap: 8px; }
-    .lt-logos a { width: 44px; height: 44px; }
-    .lt-logos :global(.social-icon) { width: 20px; height: 20px; }
-    .lt-cards img { width: 64px; height: 48px; }
+    .lt { padding: 28px 0 48px; }
+    :global(.lt-card img) { width: 64px; height: 48px; }
   }
 </style>

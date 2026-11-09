@@ -1,0 +1,212 @@
+---
+/**
+ * Sunflower bed along the bottom edge of the page.
+ *
+ * At rest they're small. When the pointer enters the footer they grow toward
+ * it and bend — stem leaning, head counter-rotating so the face stays on the
+ * light — the way a real sunflower tracks the sun. Distance decides how much:
+ * the nearest flower reaches hardest, the far ones barely stir.
+ */
+const FLOWERS = 9;
+---
+
+<div class="sunflowers" id="sunflowers" aria-hidden="true">
+  {
+    Array.from({ length: FLOWERS }).map((_, i) => (
+      <span class="sf" style={`--i:${i}`}>
+        <svg viewBox="0 0 100 190" fill="none" aria-hidden="true">
+          {/* stem: curves with the lean */}
+          <path
+            class="sf-stem"
+            d="M50 190C50 160 50 130 50 104"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+          />
+          <path class="sf-leaf" d="M50 150c-15-4-24-13-26-25 14 1 23 9 26 25Z" fill="currentColor" opacity=".5" />
+          <path class="sf-leaf sf-leaf--r" d="M50 128c13-3 21-11 23-22-12 1-20 8-23 22Z" fill="currentColor" opacity=".38" />
+
+          <g class="sf-head">
+            {/* outer petals, then a shorter inner ring for depth */}
+            <g class="sf-ring sf-ring--outer">
+              {
+                Array.from({ length: 13 }).map((_, p) => (
+                  <ellipse cx="50" cy="64" rx="5.4" ry="17" fill="currentColor" transform={`rotate(${p * 27.7} 50 92)`} />
+                ))
+              }
+            </g>
+            <g class="sf-ring sf-ring--inner">
+              {
+                Array.from({ length: 11 }).map((_, p) => (
+                  <ellipse cx="50" cy="70" rx="4.4" ry="13" fill="currentColor" opacity=".82" transform={`rotate(${p * 32.7 + 15} 50 92)`} />
+                ))
+              }
+            </g>
+            <circle cx="50" cy="92" r="15" fill="currentColor" class="sf-disc" />
+            <circle cx="50" cy="92" r="9.5" fill="#000" opacity=".42" />
+          </g>
+        </svg>
+      </span>
+    ))
+  }
+</div>
+
+<script>
+  (() => {
+    const field = document.getElementById('sunflowers');
+    if (!(field instanceof HTMLElement)) return;
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
+
+    const flowers = Array.from(field.querySelectorAll<HTMLElement>('.sf'));
+    if (!flowers.length) return;
+
+    const footer = field.closest('footer');
+    let inFooter = false;
+    let pointer = { x: -9999, y: -9999 };
+    let raf = 0;
+
+    const state = flowers.map(() => ({ lean: 0, head: 0, grow: 1 }));
+
+    /** one pass: work out every flower's lean, head tilt and size. */
+    const step = () => {
+      let moving = false;
+
+      flowers.forEach((el, i) => {
+        const r = el.getBoundingClientRect();
+        const baseX = r.left + r.width / 2;
+        const baseY = r.top + r.height; // foot of the stem
+
+        const dx = pointer.x - baseX;
+        const dy = pointer.y - baseY;
+        const dist = Math.hypot(dx, dy);
+
+        // 0deg is straight up; positive leans right
+        let deg = (Math.atan2(dx, -dy) * 180) / Math.PI;
+        if (deg > 180) deg -= 360;
+
+        // how much this flower cares: near = reach, far = ignore
+        const reach = inFooter ? Math.max(0, 1 - dist / 520) : 0;
+        const pull = reach * reach;
+
+        const targetLean = Math.max(-26, Math.min(26, deg * 0.5)) * pull;
+        const targetHead = -targetLean * 0.62;   // the face stays on the light
+        const targetGrow = 1 + pull * 1.15;      // up to ~2.15x
+
+        const s = state[i];
+        s.lean += (targetLean - s.lean) * 0.12;
+        s.head += (targetHead - s.head) * 0.12;
+        s.grow += (targetGrow - s.grow) * 0.12;
+
+        el.style.setProperty('--lean', s.lean.toFixed(2));
+        el.style.setProperty('--head', s.head.toFixed(2));
+        el.style.setProperty('--grow', s.grow.toFixed(3));
+
+        if (
+          Math.abs(targetLean - s.lean) > 0.05 ||
+          Math.abs(targetGrow - s.grow) > 0.002 ||
+          Math.abs(targetHead - s.head) > 0.05
+        ) {
+          moving = true;
+        }
+      });
+
+      return moving;
+    };
+
+    // rAF only smooths the follow-up frames; the first update is immediate,
+    // so the flowers respond even if the frame loop is throttled.
+    const loop = () => {
+      raf = 0;
+      if (step()) raf = requestAnimationFrame(loop);
+    };
+
+    const kick = () => {
+      if (step() && !raf) raf = requestAnimationFrame(loop);
+    };
+
+    if (footer) {
+      footer.addEventListener('pointerenter', () => {
+        inFooter = true;
+        kick();
+      });
+      footer.addEventListener('pointerleave', () => {
+        inFooter = false;
+        pointer = { x: -9999, y: -9999 };
+        kick();
+      });
+    }
+
+    window.addEventListener(
+      'pointermove',
+      (e) => {
+        if (e.pointerType && e.pointerType !== 'mouse') return;
+        pointer = { x: e.clientX, y: e.clientY };
+        kick();
+      },
+      { passive: true },
+    );
+
+    window.addEventListener('scroll', kick, { passive: true });
+    window.addEventListener('resize', kick, { passive: true });
+  })();
+</script>
+
+<style>
+  .sunflowers {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: clamp(6px, 2.2vw, 30px);
+    height: clamp(86px, 9vw, 124px);
+    padding-inline: clamp(10px, 3vw, 40px);
+    margin-top: 0;
+    overflow: visible;
+    pointer-events: none;
+    color: var(--petal);
+    user-select: none;
+  }
+
+  .sf {
+    display: block;
+    flex: 0 0 auto;
+    width: clamp(22px, 2.6vw, 34px);
+    transform-origin: 50% 100%;
+    transform:
+      rotate(calc(var(--lean, 0) * 1deg))
+      scale(var(--grow, 1));
+    transition: transform .55s cubic-bezier(.2, .8, .2, 1);
+    transition-delay: calc(var(--i) * 26ms);
+    will-change: transform;
+  }
+
+  .sf svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+  /* the head keeps its own pivot at the top of the stem, so it counter-turns */
+  .sf-head {
+    transform: rotate(calc(var(--head, 0) * 1deg));
+    transform-origin: 50px 92px;
+    transition: transform .55s cubic-bezier(.2, .8, .2, 1);
+    transition-delay: calc(var(--i) * 26ms);
+  }
+
+  .sf-disc { opacity: .95; }
+
+  /* stems and leaves go green; the heads stay sunflower gold */
+  .sf-stem { stroke: var(--leaf); }
+  .sf-leaf { fill: var(--leaf); }
+
+  /* a little height variation so it reads as a bed, not a fence */
+  .sf:nth-child(3n) { width: clamp(26px, 3.1vw, 40px); }
+  .sf:nth-child(4n) { width: clamp(19px, 2.2vw, 28px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sf, .sf-head { transition: none; }
+  }
+
+  @media (max-width: 620px) {
+    .sunflowers { height: 46px; gap: 3px; }
+    .sf:nth-child(n + 8) { display: none; }
+  }
+</style>

@@ -1,0 +1,361 @@
+---
+/**
+ * Full-page animated backdrop.
+ *
+ * One fixed canvas behind everything, cycling through six mathematical
+ * systems — Lorenz, Rössler, Aizawa, Thomas, Halvorsen and a Lissajous knot.
+ * Each one is integrated (RK4) or generated parametrically, normalised to a
+ * unit box, then slowly rotated and projected with a weak perspective. The
+ * trace draws itself point by point, fades, and hands over to the next system.
+ *
+ * Sits at z-index -2: above the page background, below the drifting colour
+ * field (body::before, -1) and all content.
+ */
+---
+
+<canvas id="backdrop" aria-hidden="true"></canvas>
+
+<style>
+  #backdrop {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 0.2;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #backdrop {
+      opacity: 0.18;
+    }
+  }
+
+
+  /* pull it back on phones: the display type sits straight on the backdrop */
+  @media (max-width: 620px) {
+    #backdrop {
+      opacity: 0.13;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const canvas = document.getElementById('backdrop');
+    if (!(canvas instanceof HTMLCanvasElement)) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ---------------------------------------------------------------- systems */
+
+    const DEFS = [
+      {
+        name: 'lorenz',
+        x0: [0.1, 0, 20],
+        dt: 0.004,
+        n: 5400,
+        pitch: 0.55,
+        f: (x, y, z) => [10 * (y - x), x * (28 - z) - y, x * y - (8 / 3) * z],
+      },
+      {
+        name: 'rossler',
+        x0: [1, 1, 1],
+        dt: 0.022,
+        n: 5400,
+        pitch: 0.34,
+        f: (x, y, z) => [-y - z, x + 0.2 * y, 0.2 + z * (x - 5.7)],
+      },
+      {
+        name: 'aizawa',
+        x0: [0.1, 0, 0],
+        dt: 0.011,
+        n: 5400,
+        pitch: 0.52,
+        f: (x, y, z) => {
+          const a = 0.95, b = 0.7, c = 0.6, d = 3.5, e = 0.25, g = 0.1;
+          return [
+            (z - b) * x - d * y,
+            d * x + (z - b) * y,
+            c + a * z - (z * z * z) / 3 - (x * x + y * y) * (1 + e * z) + g * z * x * x * x,
+          ];
+        },
+      },
+      {
+        name: 'thomas',
+        x0: [1, 1, 1],
+        dt: 0.05,
+        n: 5400,
+        pitch: 0.44,
+        f: (x, y, z) => [
+          Math.sin(y) - 0.19 * x,
+          Math.sin(z) - 0.19 * y,
+          Math.sin(x) - 0.19 * z,
+        ],
+      },
+      {
+        name: 'halvorsen',
+        x0: [-1.48, -1.51, -1.54],
+        dt: 0.009,
+        n: 5400,
+        pitch: 0.5,
+        f: (x, y, z) => {
+          const a = 1.89;
+          return [
+            -a * x - 4 * y - 4 * z - y * y,
+            -a * y - 4 * z - 4 * x - z * z,
+            -a * z - 4 * x - 4 * y - x * x,
+          ];
+        },
+      },
+      { name: 'lissajous', parametric: true, n: 2600, pitch: 0.62 },
+    ];
+
+    /** RK4, skipping the initial transient, then normalised to a unit box. */
+    function integrate(def) {
+      const { f, x0, dt } = def;
+      const n = def.n;
+      const raw = new Float32Array(n * 3);
+      let x = x0[0], y = x0[1], z = x0[2];
+
+      for (let i = 0; i < n; i++) {
+        raw[i * 3] = x;
+        raw[i * 3 + 1] = y;
+        raw[i * 3 + 2] = z;
+
+        const k1 = f(x, y, z);
+        const k2 = f(x + 0.5 * dt * k1[0], y + 0.5 * dt * k1[1], z + 0.5 * dt * k1[2]);
+        const k3 = f(x + 0.5 * dt * k2[0], y + 0.5 * dt * k2[1], z + 0.5 * dt * k2[2]);
+        const k4 = f(x + dt * k3[0], y + dt * k3[1], z + dt * k3[2]);
+
+        x += (dt * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0])) / 6;
+        y += (dt * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1])) / 6;
+        z += (dt * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2])) / 6;
+      }
+
+      // drop the transient so the first frames are already on the attractor
+      const skip = Math.min(600, Math.floor(n * 0.12));
+      return raw.subarray(skip * 3);
+    }
+
+    /** A closed Lissajous knot, sampled evenly. */
+    function lissajous(n) {
+      const raw = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        const t = (i / n) * Math.PI * 2;
+        raw[i * 3] = Math.sin(3 * t + 0.4);
+        raw[i * 3 + 1] = Math.sin(4 * t);
+        raw[i * 3 + 2] = 0.55 * Math.sin(5 * t + 1.1);
+      }
+      return raw;
+    }
+
+    /** Centre on the centroid and scale the widest axis to 1. */
+    function normalise(raw) {
+      const n = raw.length / 3;
+      let cx = 0, cy = 0, cz = 0;
+      for (let i = 0; i < n; i++) {
+        cx += raw[i * 3];
+        cy += raw[i * 3 + 1];
+        cz += raw[i * 3 + 2];
+      }
+      cx /= n; cy /= n; cz /= n;
+
+      let span = 0;
+      for (let i = 0; i < n; i++) {
+        span = Math.max(
+          span,
+          Math.abs(raw[i * 3] - cx),
+          Math.abs(raw[i * 3 + 1] - cy),
+          Math.abs(raw[i * 3 + 2] - cz),
+        );
+      }
+      const k = span > 0 ? 1 / span : 1;
+
+      const out = new Float32Array(n * 3);
+      let zmin = Infinity, zmax = -Infinity;
+      for (let i = 0; i < n; i++) {
+        const x = (raw[i * 3] - cx) * k;
+        const y = (raw[i * 3 + 1] - cy) * k;
+        const z = (raw[i * 3 + 2] - cz) * k;
+        out[i * 3] = x;
+        out[i * 3 + 1] = y;
+        out[i * 3 + 2] = z;
+        if (z < zmin) zmin = z;
+        if (z > zmax) zmax = z;
+      }
+      return { pts: out, zmin, zmax };
+    }
+
+    const built = [];
+
+    function system(i) {
+      if (built[i]) return built[i];
+      const def = DEFS[i];
+      const raw = def.parametric ? lissajous(def.n) : integrate(def);
+      built[i] = { ...normalise(raw), def };
+      return built[i];
+    }
+
+    /* ---------------------------------------------------------------- canvas */
+
+    let W = 0;
+    let H = 0;
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      W = Math.max(1, window.innerWidth);
+      H = Math.max(1, window.innerHeight);
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    /* deep magenta → hot pink → pale halo, same ramp as the artwork */
+    /** Depth ramp: dim ink in the far field, sunflower gold toward the light.
+     *  Read per frame so the day/night switch lands without a repaint hook. */
+    function buckets() {
+      const light = document.documentElement.dataset.theme === 'light';
+
+      const far = light ? '18, 18, 18' : '244, 241, 234';
+      const gold = light ? '160, 105, 0' : '246, 185, 59';
+
+      const k = light ? 1.25 : 1;
+
+      return [
+        { hi: 0.34, style: `rgba(${far}, ${0.07 * k})` },
+        { hi: 0.74, style: `rgba(${gold}, ${0.12 * k})` },
+        { hi: 1.01, style: `rgba(${gold}, ${0.24 * k})` },
+      ];
+    }
+
+    const STEP = 13;          // points added per frame
+    const HOLD = 150;        // frames to sit on the finished figure
+    const WIPE = 55;         // frames to fade out before switching
+
+    let idx = 0;
+    let head = 0;
+    let state = 'draw';
+    let wait = 0;
+    let yaw = -0.9;
+
+    function fade(alpha) {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = 'rgba(0, 0, 0, ' + alpha + ')';
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'lighter';
+    }
+
+    function drawChunk(S, from, to, stride) {
+      stride = stride || 1;
+      const { pts, zmin, zmax, def } = S;
+      const n = pts.length / 3;
+      if (to > n - 1) to = n - 1;
+
+      const cy = Math.cos(yaw);
+      const sy = Math.sin(yaw);
+      const cp = Math.cos(def.pitch);
+      const sp = Math.sin(def.pitch);
+      const R = Math.min(W, H) * 0.46;
+      const cx = W * 0.5;
+      const cyy = H * 0.46;
+      const zr = zmax - zmin || 1;
+
+      ctx.lineWidth = 1.1;
+      ctx.lineCap = 'round';
+
+      const B = buckets();
+      for (let b = 0; b < B.length; b++) {
+        ctx.strokeStyle = B[b].style;
+        ctx.beginPath();
+        let drew = false;
+
+        for (let i = from; i < to; i += stride) {
+          const z = pts[i * 3 + 2];
+          const d = (z - zmin) / zr;
+          const lo = b === 0 ? 0 : B[b - 1].hi;
+          if (d < lo || d >= B[b].hi) continue;
+
+          const ax = pts[i * 3];
+          const ay = pts[i * 3 + 1];
+          const az = z;
+          const bx = pts[(i + 1) * 3];
+          const by = pts[(i + 1) * 3 + 1];
+          const bz = pts[(i + 1) * 3 + 2];
+
+          const a = project(ax, ay, az, cy, sy, cp, sp, R, cx, cyy);
+          const c = project(bx, by, bz, cy, sy, cp, sp, R, cx, cyy);
+          ctx.moveTo(a[0], a[1]);
+          ctx.lineTo(c[0], c[1]);
+          drew = true;
+        }
+        if (drew) ctx.stroke();
+      }
+    }
+
+    /** rotate about Y then X, weak perspective, map to the viewport */
+    function project(x, y, z, cy, sy, cp, sp, R, cx, cyy) {
+      const rx = x * cy + z * sy;
+      const rz = -x * sy + z * cy;
+      const ry = y * cp - rz * sp;
+      const rzz = y * sp + rz * cp;
+      const p = 6 / (6 - rzz);
+      return [cx + rx * R * p, cyy - ry * R * p];
+    }
+
+    function frame(now) {
+      const S = system(idx);
+      const n = S.pts.length / 3;
+      yaw = now * 0.00016 - 0.9;
+
+      if (state === 'draw') {
+        // accumulate — no fade, so the line work stays crisp as it grows
+        const from = Math.max(0, head - STEP);
+        head = Math.min(head + STEP, n - 1);
+        drawChunk(S, from, head + 1);
+        if (head >= n - 1) {
+          state = 'hold';
+          wait = 0;
+        }
+      } else if (state === 'hold') {
+        // the finished figure, redrawn each frame so it turns
+        ctx.clearRect(0, 0, W, H);
+        drawChunk(S, 0, n - 1, 2);
+        if (++wait > HOLD) {
+          state = 'wipe';
+          wait = 0;
+        }
+      } else {
+        fade(0.16);
+        if (++wait > WIPE) {
+          idx = (idx + 1) % DEFS.length;
+          head = 0;
+          state = 'draw';
+          wait = 0;
+          ctx.clearRect(0, 0, W, H);
+        }
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    /** one finished figure, no motion */
+    function still() {
+      resize();
+      const S = system(0);
+      drawChunk(S, 0, S.pts.length / 3 - 1);
+    }
+
+    if (reduce) {
+      still();
+      window.addEventListener('resize', still);
+    } else {
+      resize();
+      window.addEventListener('resize', resize);
+      requestAnimationFrame(frame);
+    }
+  })();
+</script>
