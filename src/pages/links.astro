@@ -1,53 +1,60 @@
 ---
 import Base from '../layouts/Base.astro';
-import Backdrop from '../components/Backdrop.astro';
+import SocialIcon from '../components/SocialIcon.astro';
 import { SITE } from '../site.config';
 
 /**
- * Unlisted link-in-bio page. Not linked from anywhere, excluded from the
- * sitemap, noindex. Share the URL directly.
+ * Link in bio. Unlisted: no nav entry, noindex, out of the sitemap.
+ * One narrow column, one stack of buttons, nothing else.
  */
-const links = SITE.links;
 const email = SITE.links.find((l) => l.label === 'email');
 const mailto = email ? email.href.replace(/^mailto:/, '') : SITE.email;
-const socials = links.filter((l) => l.label !== 'email');
+
+const KEEP = ['x', 'linkedin', 'instagram', 'youtube'];
+const socials = KEEP.map((k) => SITE.links.find((l) => l.label === k)).filter(
+  (l): l is { label: string; href: string } => Boolean(l),
+);
 ---
 
-<Base title="links" description={`Everywhere ${SITE.name} is.`} image="/og.png" noindex bare>
-  <Backdrop />
-
+<Base title="links" description={`Everywhere ${SITE.name} is.`} image="/og/links.png" noindex bare>
   <div class="lt">
-    <div class="lt-bar">
-      <span class="lt-badge">{SITE.url.replace('https://', '')}</span>
-      <a class="lt-hi" href={`mailto:${mailto}`}>say hi ↗</a>
+    <div class="lt-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        {
+          Array.from({ length: 9 }).map((_, i) => (
+            <ellipse cx="12" cy="5.4" rx="2.1" ry="5" transform={`rotate(${i * 40} 12 12)`} />
+          ))
+        }
+        <circle cx="12" cy="12" r="3.4" />
+      </svg>
     </div>
 
-    <header class="lt-head">
-      <span class="micro">{SITE.jobTitle}</span>
-      <h1 class="lt-name">{SITE.name}</h1>
-      <p class="lt-bio">Patterns, pixels &amp; the space between.</p>
-    </header>
+    <h1>{SITE.wordmark}</h1>
+    <p class="lt-role">{SITE.jobTitle}</p>
 
-    <a class="lt-mail" href={`mailto:${mailto}`}>
-      <span class="micro">email</span>
-      <span class="lt-mail-addr">{mailto}</span>
-      <span class="lt-mail-arrow" aria-hidden="true">↗</span>
-    </a>
+    <nav class="lt-stack" aria-label="Links">
+      <a class="lt-link" href={`mailto:${mailto}`}>
+        <span>email</span>
+        <em>{mailto}</em>
+      </a>
 
-    <div class="lt-social">
+      <ul class="lt-extra" id="lt-cards" hidden></ul>
+    </nav>
+
+    <ul class="lt-icons">
       {
         socials.map((l) => (
-          <a class="pill" href={l.href} rel="me noopener" target="_blank">
-            {l.label} ↗
-          </a>
+          <li>
+            <a href={l.href} rel="me noopener" target="_blank" aria-label={l.label} title={l.label}>
+              <SocialIcon name={l.label} />
+            </a>
+          </li>
         ))
       }
-    </div>
-
-    <ul class="lt-cards" id="lt-cards" hidden></ul>
+    </ul>
 
     <p class="lt-foot">
-      <a href="/">← {SITE.url.replace('https://', '')}</a>
+      <a href="/">{SITE.url.replace('https://', '')} ↗</a>
     </p>
   </div>
 </Base>
@@ -58,205 +65,184 @@ const socials = links.filter((l) => l.label !== 'email');
     const wrap = document.getElementById('lt-cards');
     if (!wrap) return;
 
-    fetch('/api/links', { headers: { accept: 'application/json' } })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('no links'))))
-      .then((d) => {
-        const links = Array.isArray(d.links) ? d.links : [];
-        if (!links.length) return;
+    const show = (links: Array<{ label?: string; url?: string }>) => {
+      if (!Array.isArray(links) || !links.length) return;
 
-        for (const l of links) {
-          const li = document.createElement('li');
-          li.className = 'lt-card';
+      wrap.innerHTML = '';
+      for (const link of links) {
+        if (!link || !link.url) continue;
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.className = 'lt-link';
+        a.href = link.url;
+        a.target = '_blank';
+        a.rel = 'noopener';
 
-          const a = document.createElement('a');
-          a.href = l.url;
-          a.target = '_blank';
-          a.rel = 'noopener';
+        const label = document.createElement('span');
+        label.textContent = link.label || link.url;
+        const arrow = document.createElement('em');
+        arrow.textContent = '↗';
 
-          if (l.image) {
-            const img = document.createElement('img');
-            img.src = l.image;
-            img.alt = '';
-            img.loading = 'lazy';
-            img.referrerPolicy = 'no-referrer';
-            img.onerror = () => img.remove();
-            a.appendChild(img);
-          }
+        a.append(label, arrow);
+        li.appendChild(a);
+        wrap.appendChild(li);
+      }
+      wrap.hidden = wrap.children.length === 0;
+    };
 
-          const body = document.createElement('div');
-          body.className = 'lt-card-body';
-          const site = document.createElement('span');
-          site.className = 'lt-card-site';
-          site.textContent = l.site || '';
-          const title = document.createElement('strong');
-          title.className = 'lt-card-title';
-          title.textContent = l.title || l.url;
-          const desc = document.createElement('span');
-          desc.className = 'lt-card-desc';
-          desc.textContent = l.description || '';
-          body.append(site, title, desc);
-
-          const arrow = document.createElement('span');
-          arrow.className = 'lt-card-arrow';
-          arrow.setAttribute('aria-hidden', 'true');
-          arrow.textContent = '↗';
-
-          a.append(body, arrow);
-          li.appendChild(a);
-          wrap.appendChild(li);
-        }
-        wrap.hidden = false;
-      })
+    fetch('/api/links')
+      .then((r) => (r.ok ? r.json() : { links: [] }))
+      .then((d) => show(d.links))
       .catch(() => {
-        /* no /api/links (astro dev, or no KV) — leave the cards hidden */
+        /* offline: the page still works */
       });
   })();
 </script>
 
 <style>
   .lt {
-    position: relative;
-    z-index: 1;
-    width: min(620px, calc(100% - 48px));
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    width: min(420px, 100% - 40px);
     margin-inline: auto;
-    padding: 44px 0 64px;
+    padding: 56px 0 40px;
+    text-align: center;
   }
 
-  .lt-bar {
+  /* the sunflower, as a monogram */
+  .lt-mark {
+    width: 44px;
+    height: 44px;
+    color: var(--petal);
+    margin-bottom: 20px;
+  }
+  .lt-mark svg { width: 100%; height: 100%; }
+  .lt-mark ellipse { fill: currentColor; opacity: .85; }
+  .lt-mark circle { fill: var(--bg); stroke: currentColor; stroke-width: 2; }
+
+  .lt h1 {
+    font-size: clamp(26px, 7vw, 34px);
+    font-weight: 800;
+    letter-spacing: -.05em;
+    margin: 0;
+    color: var(--text);
+  }
+
+  .lt-role {
+    margin: 6px 0 0;
+    font: italic 17px/1.4 var(--serif);
+    color: var(--dim);
+  }
+
+  .lt-stack {
+    width: 100%;
+    display: grid;
+    gap: 10px;
+    margin-top: 34px;
+  }
+
+  .lt-extra {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+
+  /* one shape for every destination */
+  .lt-link {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--line);
-    margin-bottom: 40px;
-  }
-
-  .lt-badge {
-    font-size: 10px;
-    letter-spacing: .2em;
-    text-transform: uppercase;
-    color: var(--dim);
-  }
-
-  .lt-hi {
-    font-size: 10px;
-    letter-spacing: .18em;
-    text-transform: uppercase;
-    color: var(--text);
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 2px;
-  }
-  .lt-hi:hover { border-color: var(--text); }
-
-  .lt-head { margin-bottom: 28px; }
-  .lt-head .micro { margin-bottom: 12px; }
-
-  .lt-name {
-    margin: 0;
-    font-size: clamp(38px, 9vw, 64px);
-    font-weight: 800;
-    line-height: .92;
-    letter-spacing: -.055em;
-  }
-
-  .lt-bio {
-    font: italic 21px/1.4 var(--serif);
-    color: var(--dim);
-    margin: 14px 0 0;
-  }
-
-  .lt-mail {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 18px 0;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    transition: padding-left .25s var(--ease);
-  }
-  .lt-mail:hover { padding-left: 10px; }
-
-  .lt-mail-addr {
-    font-size: 15px;
-    color: var(--text);
-    overflow-wrap: anywhere;
-  }
-  .lt-mail-arrow { margin-left: auto; color: var(--dim); }
-
-  .lt-social {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    margin-top: 22px;
-  }
-
-  .lt-foot { margin: 44px 0 0; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
-  .lt-foot a { color: var(--dimmer); }
-  .lt-foot a:hover { color: var(--text); }
-
-  /* ---- KV-backed cards (built in JS, hence :global) ---- */
-  :global(.lt-cards) {
-    list-style: none;
-    margin: 40px 0 0;
-    padding: 0;
-    border-top: 1px solid var(--line);
-  }
-  :global(.lt-card) { border-bottom: 1px solid var(--line); }
-  :global(.lt-card a) {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 18px 0;
-    color: var(--text);
-    transition: padding-left .25s var(--ease);
-  }
-  :global(.lt-card a:hover) { padding-left: 12px; }
-  :global(.lt-card a:focus-visible) { outline: 1px solid var(--text); outline-offset: 4px; }
-  :global(.lt-card img) {
-    width: 84px;
-    height: 60px;
-    object-fit: cover;
+    gap: 12px;
+    width: 100%;
+    padding: 15px 18px;
     border: 1px solid var(--line);
-    background: var(--bg-2);
-    flex: 0 0 auto;
-    filter: grayscale(1);
-    transition: filter .25s ease;
-  }
-  :global(.lt-card a:hover img) { filter: grayscale(0); }
-  :global(.lt-card-body) {
-    flex: 1 1 150px;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  :global(.lt-card-site) {
-    color: var(--dimmer);
-    font-size: 10px;
-    letter-spacing: .18em;
-    text-transform: uppercase;
-  }
-  :global(.lt-card-title) {
-    font-size: 18px;
-    font-weight: 600;
-    letter-spacing: -.025em;
-    line-height: 1.25;
-  }
-  :global(.lt-card-desc) {
-    color: var(--dim);
+    background: transparent;
+    color: var(--text);
+    font-family: var(--sans);
     font-size: 13px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    letter-spacing: .01em;
+    text-decoration: none;
+    transition:
+      border-color .25s ease,
+      color .25s ease,
+      background .25s ease,
+      transform .25s var(--ease);
   }
-  :global(.lt-card-arrow) { flex: 0 0 auto; color: var(--dim); }
-  :global(.lt-card a:hover .lt-card-arrow) { color: var(--text); }
+
+  .lt-link span {
+    font-family: var(--sans);
+    font-style: normal;
+  }
+
+  .lt-link em {
+    font-style: normal;
+    font-size: 11px;
+    letter-spacing: .06em;
+    color: var(--dim);
+    transition: color .25s ease, transform .25s var(--ease);
+  }
+
+  .lt-link:hover,
+  .lt-link:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .lt-link:hover em { color: var(--accent); transform: translate(2px, -2px); }
+
+  .lt-icons {
+    list-style: none;
+    display: flex;
+    gap: 8px;
+    padding: 0;
+    margin: 26px 0 0;
+  }
+
+  .lt-icons .social-icon { width: 16px; height: 16px; display: block; }
+
+  .lt-icons a {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: var(--dim);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color .25s ease, border-color .25s ease, transform .25s var(--ease);
+  }
+
+  .lt-icons a:hover,
+  .lt-icons a:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+    transform: translateY(-3px);
+  }
+
+  .lt-foot {
+    margin: 36px 0 0;
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    font-family: var(--sans);
+  }
+
+  .lt-foot a { color: var(--dimmer); text-decoration: none; transition: color .25s ease; }
+  .lt-foot a:hover { color: var(--accent); }
 
   @media (max-width: 420px) {
-    .lt { padding: 28px 0 48px; }
-    :global(.lt-card img) { width: 64px; height: 48px; }
+    .lt { width: 100% - 32px; padding-top: 44px; }
+    .lt-link { padding: 14px 16px; }
   }
 </style>

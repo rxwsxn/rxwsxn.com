@@ -165,6 +165,15 @@ cause:
 | `github refused the write — …` | the PAT lacks **Contents: Read and write**, or `GITHUB_REPO` is wrong | fix the token/repo |
 | `network — the request never left the browser` | offline, or a blocker | retry |
 
+**Social cards** regenerate on every build via `prebuild` →
+`images:missing`, which only draws cards that are absent. That needs Python 3
+and Pillow on the build image; if they're missing the step exits 0 and the
+committed PNGs are used. To force it, set the build command to:
+
+```bash
+python3 -m pip install --quiet pillow && npm run build
+```
+
 **Images** go through the same token: `/api/upload` commits them to
 `public/images/<slug>/` and hands back the path to paste into markdown. Nothing
 extra to configure.

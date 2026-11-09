@@ -11,7 +11,7 @@ import Base from '../layouts/Base.astro';
  */
 ---
 
-<Base title="studio" description="Authoring studio." noindex bare>
+<Base title="studio" description="Authoring studio." image="/og/studio.png" noindex bare>
   <div class="st">
     <header class="st-bar">
       <div class="st-brand">
@@ -346,17 +346,16 @@ import Base from '../layouts/Base.astro';
 
       const W = cardEl.width;
       const H = cardEl.height;
-      const light = document.documentElement.dataset.theme === 'light';
-
-      const bg = light ? '#f2efe9' : '#0b0b0b';
-      const ink = light ? '#121212' : '#f4f1ea';
-      const dim = light ? '#55554f' : '#8b8b86';
-      const gold = light ? '#8a5a00' : '#f6b93b';
+      // dark only
+      const bg = '#000000';
+      const ink = '#f4f1ea';
+      const dim = '#9a9a94';
+      const gold = '#f6b93b';
 
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, W, H);
 
-      ctx.strokeStyle = light ? 'rgba(18,18,18,.18)' : 'rgba(244,241,234,.18)';
+      ctx.strokeStyle = 'rgba(244,241,234,.18)';
       ctx.lineWidth = 2;
       ctx.strokeRect(24, 24, W - 48, H - 48);
 

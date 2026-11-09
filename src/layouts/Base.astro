@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { SITE } from '../site.config';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import Backdrop from '../components/Backdrop.astro';
+import Sky from '../components/Sky.astro';
 
 interface Props {
   title?: string;
@@ -85,7 +85,7 @@ const blocks = [siteGraph, ...jsonLd];
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -101,7 +101,7 @@ const blocks = [siteGraph, ...jsonLd];
     {!noindex && <link rel="canonical" href={canonical} />}
     <meta name="author" content={SITE.name} />
     <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#0b0b0b" />
+    <meta name="theme-color" content="#000000" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -110,18 +110,6 @@ const blocks = [siteGraph, ...jsonLd];
       rel="stylesheet"
     />
 
-
-    <!-- theme before first paint, so there's no flash -->
-    <script is:inline>
-      (() => {
-        try {
-          document.documentElement.dataset.theme =
-            localStorage.getItem('rxwsxn-theme') === 'light' ? 'light' : 'dark';
-        } catch {
-          document.documentElement.dataset.theme = 'dark';
-        }
-      })();
-    </script>
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -163,7 +151,7 @@ const blocks = [siteGraph, ...jsonLd];
     ))}
   </head>
   <body>
-    <Backdrop />
+    <Sky />
     {!bare && <Header />}
     <main id="main">
       <slot />

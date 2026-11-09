@@ -2,14 +2,19 @@
 import { SITE } from '../site.config';
 
 /**
- * Full-viewport hero. The statement is set in two lines — bold, a serif italic
- * in the middle, bold again — and each word rises in sequence. A hand-drawn
- * stroke underlines the italic word once the line has landed.
+ * Hero: the Lorenz attractor at full page, drawn as a glowing trail.
+ *
+ * One trajectory is integrated into a ring buffer; each frame the head
+ * advances and the last N points are stroked as thirty tapering segments, so
+ * the curve is drawn and fades at the tail at the same time. The figure turns
+ * slowly, and the whole thing pauses when it scrolls out of view.
  */
 const words = SITE.name.split(' ');
 ---
 
 <section class="hero">
+  <canvas id="lorenz" aria-hidden="true"></canvas>
+
   <div class="wrap hero-inner">
     <div class="hero-meta">
       <span class="micro">Portfolio — {new Date().getFullYear()}</span>
@@ -23,14 +28,7 @@ const words = SITE.name.split(' ');
         <span class="w" style="--d:2"><span>ai</span></span>
       </span>
       <span class="line">
-        <span class="w w--em" style="--d:3">
-          <span>
-            products
-            <svg class="swoosh" viewBox="0 0 300 22" preserveAspectRatio="none" aria-hidden="true">
-              <path d="M3 15C62 6 128 3 297 9" />
-            </svg>
-          </span>
-        </span>
+        <span class="w w--em" style="--d:3"><span>products</span></span>
         <span class="w" style="--d:4"><span>that</span></span>
         <span class="w" style="--d:5"><span>ship.</span></span>
       </span>
@@ -45,3 +43,265 @@ const words = SITE.name.split(' ');
     </div>
   </div>
 </section>
+
+<script>
+  (() => {
+    const cv = document.getElementById('lorenz');
+    if (!(cv instanceof HTMLCanvasElement)) return;
+    const ctx = cv.getContext('2d');
+    if (!ctx) return;
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const N = 1800;
+    const trail = new Float32Array(N * 3);
+    let head = 0;
+
+    let x = 0.1;
+    let y = 0;
+    let z = 0.1;
+    const step = () => {
+      const d = 0.006;
+      const dx = 10 * (y - x);
+      const dy = x * (28 - z) - y;
+      const dz = x * y - (8 / 3) * z;
+      x += dx * d;
+      y += dy * d;
+      z += dz * d;
+      const i = head * 3;
+      trail[i] = x;
+      trail[i + 1] = y;
+      trail[i + 2] = z;
+      head = (head + 1) % N;
+    };
+    for (let i = 0; i < N + 600; i += 1) step();
+
+    let W = 0;
+    let H = 0;
+    let D = 1;
+    let visible = true;
+    let colours = { a: [246, 185, 59], b: [244, 241, 234] };
+
+    const rgb = (hex: string) => {
+      const h = hex.replace('#', '').trim();
+      const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+      return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) || 0);
+    };
+
+    const readColours = () => {
+      const s = getComputedStyle(document.documentElement);
+      colours = {
+        a: rgb(s.getPropertyValue('--petal') || '#f6b93b'),
+        b: rgb(s.getPropertyValue('--text') || '#f4f1ea'),
+      };
+    };
+
+    const mix = (t: number, alpha: number) => {
+      const c = colours.a.map((v, i) => Math.round(v + (colours.b[i] - v) * t));
+      return `rgba(${c[0]},${c[1]},${c[2]},${alpha})`;
+    };
+
+    const fit = () => {
+      D = Math.min(window.devicePixelRatio || 1, 2);
+      const r = cv.getBoundingClientRect();
+      W = r.width;
+      H = r.height;
+      cv.width = Math.floor(W * D);
+      cv.height = Math.floor(H * D);
+      if (reduce) draw(0);
+    };
+
+    const draw = (t: number) => {
+      ctx.setTransform(D, 0, 0, D, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+
+      // yaw slowly, tilt so the two lobes read as a body rather than a column
+      const yaw = 0.8 * Math.sin(t * 0.0002) + 0.35;
+      const tilt = 1.28;
+      const cy = Math.cos(yaw);
+      const sy = Math.sin(yaw);
+      const ct = Math.cos(tilt);
+      const st = Math.sin(tilt);
+
+      const raw = new Float32Array(N * 2);
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
+
+      for (let k = 0; k < N; k += 1) {
+        const i = ((head + k) % N) * 3;
+        const px = trail[i] * cy - trail[i + 1] * sy;
+        const py = trail[i] * sy + trail[i + 1] * cy;
+        const y = py * ct - (trail[i + 2] - 25) * st;
+
+        raw[k * 2] = px;
+        raw[k * 2 + 1] = y;
+
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+
+      // fit whatever the figure currently is to the box, then centre it
+      const spanX = Math.max(maxX - minX, 1e-3);
+      const spanY = Math.max(maxY - minY, 1e-3);
+      const scale = Math.min((W * 0.78) / spanX, (H * 0.74) / spanY);
+      const cx = W * 0.63;
+      const cyy = H * 0.44;
+      const ox = (minX + maxX) / 2;
+      const oy = (minY + maxY) / 2;
+
+      const pts = new Float32Array(N * 2);
+      for (let k = 0; k < N; k += 1) {
+        pts[k * 2] = cx + (raw[k * 2] - ox) * scale;
+        pts[k * 2 + 1] = cyy - (raw[k * 2 + 1] - oy) * scale;
+      }
+
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const K = 30;
+      const per = N / K;
+
+      for (let s = 0; s < K; s += 1) {
+        const t2 = s / (K - 1);
+        const from = Math.max(Math.floor(s * per) - 1, 0);
+        const to = Math.floor((s + 1) * per);
+
+        ctx.beginPath();
+        ctx.moveTo(pts[from * 2], pts[from * 2 + 1]);
+        for (let j = from + 1; j < to; j += 1) ctx.lineTo(pts[j * 2], pts[j * 2 + 1]);
+
+        ctx.strokeStyle = mix(t2, 0.02 + 0.1 * t2);
+        ctx.lineWidth = 7;
+        ctx.stroke();
+
+        ctx.strokeStyle = mix(t2, 0.16 + 0.8 * t2);
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+      }
+    };
+
+    const loop = (t: number) => {
+      requestAnimationFrame(loop);
+      if (document.hidden || !visible) return;
+      for (let i = 0; i < 4; i += 1) step();
+      draw(t);
+    };
+
+    readColours();
+    fit();
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(
+        (entries) => entries.forEach((e) => (visible = e.isIntersecting)),
+        { threshold: 0.01 },
+      ).observe(cv);
+    }
+
+    window.addEventListener('resize', fit);
+    new MutationObserver(readColours).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+
+    if (!reduce) requestAnimationFrame(loop);
+    else draw(0);
+  })();
+</script>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: calc(100svh - 64px);
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+  }
+
+  #lorenz {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
+
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(26px, 5vh, 64px);
+    padding-block: clamp(22px, 4vh, 44px) clamp(30px, 7vh, 80px);
+  }
+
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 18px;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 12px;
+  }
+
+  .hero h1 {
+    margin: 0;
+    line-height: .9;
+    letter-spacing: -.055em;
+    text-shadow: 0 0 60px var(--bg), 0 0 26px var(--bg);
+  }
+
+  .hero h1 .line { display: block; white-space: nowrap; }
+  .hero h1 .w { display: inline-block; }
+
+  .hero h1 .w > span {
+    display: inline-block;
+    animation: wordUp .95s var(--ease) both;
+    animation-delay: calc(var(--d) * 95ms + 120ms);
+  }
+
+  .hero h1 .w--em > span {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -.015em;
+    color: var(--accent);
+  }
+
+  @keyframes wordUp {
+    from { opacity: 0; transform: translateY(.4em); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .hero-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 22px;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 18px;
+  }
+
+  .hero-intro {
+    font: italic clamp(19px, 2.2vw, 26px) / 1.4 var(--serif);
+    color: var(--body-2);
+    max-width: 34ch;
+    margin: 0;
+    text-shadow: 0 0 24px var(--bg);
+  }
+
+  @media (max-width: 900px) {
+    .hero { min-height: calc(100svh - 60px); }
+    .hero h1 { font-size: clamp(44px, 13vw, 96px); }
+    .hero h1 .line { white-space: normal; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero h1 .w > span { animation: none; }
+  }
+</style>

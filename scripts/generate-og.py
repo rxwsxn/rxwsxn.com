@@ -5,8 +5,6 @@ Generate images for rxwsxn.com — mathematically.
 Outputs:
   public/og.png                home card                   (1200x630)
   public/og/blog.png           blog index card
-  public/og/about.png          about card
-  public/og/contact.png        contact card
   public/og/<slug>.png         one card per post
   public/apple-touch-icon.png  geometric app icon          (180x180)
 
@@ -24,6 +22,7 @@ Requires Pillow:  pip3 install pillow
 """
 from __future__ import annotations
 
+import argparse
 import glob
 import hashlib
 import math
@@ -45,14 +44,14 @@ OG_DIR = os.path.join(PUBLIC, "og")
 WORK_OUT = os.path.join(PUBLIC, "work")
 
 W, H = 1200, 630
-INK = (11, 11, 11)
-BG = "#0b0b0b"
+INK = (0, 0, 0)
+BG = "#000000"
 FG = "#f4f1ea"
 MUTED = "#8b8b86"
-MUTED2 = "#5c5c58"
-ACCENT = "#f4f1ea"
-ACCENT_RGB = (244, 241, 234)
-BORDER = "#2a2a2a"
+MUTED2 = "#6f6f69"
+ACCENT = "#f6b93b"
+ACCENT_RGB = (246, 185, 59)
+BORDER = "#242424"
 
 
 # ---- fonts -----------------------------------------------------------------
@@ -369,44 +368,83 @@ def _glass_panel(img, box, radius=28, tint=20, blur=24):
     return img
 
 
-NAV = ["home", "blog", "about", "contact"]
+NAV = ["home", "work", "blog"]
+
+
+FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+_FACE_CACHE: dict = {}
+
+
+def face(name: str, size: int):
+    """Archivo / Instrument Serif from scripts/fonts, with a safe fallback."""
+    key = (name, size)
+    if key in _FACE_CACHE:
+        return _FACE_CACHE[key]
+    path = os.path.join(FONT_DIR, name)
+    try:
+        f = ImageFont.truetype(path, size)
+    except Exception:
+        f = font(size)
+    _FACE_CACHE[key] = f
+    return f
+
+
+def tracked(d, xy, text, f, fill, tracking=0):
+    """Draw with letter-spacing; PIL has no native tracking."""
+    x, y = xy
+    for ch in text:
+        d.text((x, y), ch, font=f, fill=fill)
+        x += d.textlength(ch, font=f) + tracking
+    return x
 
 
 def card_page(title: str, subtitle: str, motif: int, current: str, seed_key: str):
-    """A Liquid Glass card carrying a distinct mathematical figure per page."""
-    img, _ = base_canvas()
-    box = (56, 120, W - 56, H - 104)
-    img = _glass_panel(img, box, radius=30, tint=14, blur=26)
+    """Black, hairlines, Archivo display, italic serif — the site's language."""
+    img = Image.new("RGB", (W, H), "#000000")
     d = ImageDraw.Draw(img, "RGBA")
 
-    # framed figure, right side
-    msize, mx0, my0 = 300, 804, 173
+    # hairline frame
+    d.rectangle([28, 28, W - 29, H - 29], outline="#1b1b1b", width=1)
+
+    # figure on the right, drawn straight onto the black
+    size = 330
     seed = int(hashlib.md5(seed_key.encode("utf-8")).hexdigest(), 16) % (2 ** 32)
-    fig = ALGOS[motif % len(ALGOS)](msize, msize, random.Random(seed))
-    img.paste(fig, (mx0, my0), _rounded_mask((msize, msize), 20))
-    d.rounded_rectangle(
-        [mx0, my0, mx0 + msize - 1, my0 + msize - 1], radius=20, outline=(255, 255, 255, 55), width=1
-    )
+    fig = ALGOS[motif % len(ALGOS)](size, size, random.Random(seed))
+    img.paste(fig, (W - 64 - size, 150))
 
-    # text, left side
-    d.text((98, 152), "rxwsxn.com", font=font(24), fill=MUTED2)
-    f, lines = fit_title(d, title, 660, 2, [66, 58, 50, 44, 38])
-    lh = int(f.size * 1.26)
-    ty = 200
+    # top row
+    d.text((64, 74), "rxwsxn.com", font=face("archivo-500.ttf", 19), fill=MUTED)
+    label = (current or "raushan kumar").upper()
+    lf = face("archivo-500.ttf", 17)
+    tracked(d, (W - 64 - (d.textlength(label, font=lf) + 3 * len(label)), 76),
+            label, lf, MUTED2, tracking=3)
+
+    # title
+    f, lines = fit_title(d, title, 690, 3, [84, 74, 64, 56, 48, 42])
+    lh = int(f.size * 1.04)
+    ty = 196
     for line in lines:
-        d.text((98, ty), line, font=f, fill=ACCENT)
+        tracked(d, (64, ty), line, f, FG, tracking=-2)
         ty += lh
-    sy = ty + 14
-    for line in wrap(d, subtitle, font(26), 660)[:2]:
-        d.text((98, sy), line, font=font(26), fill=MUTED)
-        sy += 34
 
-    # nav, with the current page highlighted
-    nx = 98
-    for item in NAV:
-        label = f"[ {item} ]"
-        d.text((nx, 486), label, font=font(22), fill=(ACCENT if item == current else MUTED2))
-        nx += text_w(d, label, font(22)) + 18
+    # gold rule under the title
+    ty += 16
+    d.rectangle([64, ty, 64 + 96, ty + 3], fill=ACCENT)
+
+    # subtitle in the italic serif
+    sf = face("instrument-serif-italic.ttf", 34)
+    sy = ty + 30
+    for line in wrap(d, subtitle, sf, 660)[:2]:
+        d.text((64, sy), line, font=sf, fill=MUTED)
+        sy += 42
+
+    # bottom rule and names
+    d.line([64, H - 96, W - 64, H - 96], fill="#1b1b1b", width=1)
+    d.text((64, H - 74), "raushan kumar", font=face("archivo-500.ttf", 18), fill=MUTED)
+    year = "2026"
+    d.text((W - 64 - d.textlength(year, font=face("archivo-500.ttf", 18)), H - 74),
+           year, font=face("archivo-500.ttf", 18), fill=MUTED2)
+
     return img
 
 
@@ -450,16 +488,28 @@ def _md_files(folder: str) -> list[str]:
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser(description="Draw the social cards.")
+    ap.add_argument("--missing", action="store_true",
+                    help="only write cards that do not exist yet")
+    args = ap.parse_args()
+
     os.makedirs(OG_DIR, exist_ok=True)
 
+    def want(path: str) -> bool:
+        return not (args.missing and os.path.exists(path))
+
     pages = [
-        ("og.png", "raushan kumar", "ai product engineer  ·  bangalore / remote", 0, "home"),
+        ("og.png", "raushan kumar", "ai + product engineer", 0, "home"),
+        ("og/work.png", "work", "things built and shipped, mostly in production.", 1, "work"),
         ("og/blog.png", "blog", "dated notes — mostly ai, product, and building.", 3, "blog"),
-        ("og/about.png", "about", "the longer version — who i am and how i work.", 4, "about"),
-        ("og/contact.png", "contact", "email, github, and the fastest way to reach me.", 5, "contact"),
+        ("og/links.png", "links", "everywhere i am, in one place.", 5, "links"),
+        ("og/studio.png", "studio", "where the writing gets written.", 2, "studio"),
     ]
     for name, title, sub, motif, current in pages:
-        card_page(title, sub, motif, current, name).save(os.path.join(PUBLIC, name), "PNG")
+        out = os.path.join(PUBLIC, name)
+        if not want(out):
+            continue
+        card_page(title, sub, motif, current, name).save(out, "PNG")
         print(f"wrote public/{name}")
 
     posts = 0
@@ -472,14 +522,19 @@ def main() -> None:
         if isinstance(tags, str):
             tags = [tags]
         meta = " · ".join([p for p in [date, " ".join(f"#{t}" for t in tags)] if p])
-        card_page(title, meta, 6 + i, "blog", slug).save(os.path.join(OG_DIR, f"{slug}.png"), "PNG")
+        out = os.path.join(OG_DIR, f"{slug}.png")
+        if not want(out):
+            continue
+        card_page(title, meta, 6 + i, "blog", slug).save(out, "PNG")
         print(f"wrote public/og/{slug}.png")
         posts += 1
 
-    apple_touch_icon().save(os.path.join(PUBLIC, "apple-touch-icon.png"), "PNG")
-    print("wrote public/apple-touch-icon.png")
+    icon = os.path.join(PUBLIC, "apple-touch-icon.png")
+    if want(icon):
+        apple_touch_icon().save(icon, "PNG")
+        print("wrote public/apple-touch-icon.png")
 
-    print(f"\ndone — 4 page cards, {posts} post card(s), 1 icon")
+    print(f"\ndone — {len(pages)} page cards, {posts} post card(s), 1 icon")
 
 
 if __name__ == "__main__":

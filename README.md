@@ -76,6 +76,22 @@ Commit the regenerated PNGs. SEO meta (Open Graph, Twitter, canonical, JSON-LD)
 is emitted from `src/layouts/Base.astro`; identity defaults live in
 `src/site.config.ts`.
 
+## Sky and the hero
+
+`Sky.astro` is a fixed, full-page starfield: stars sit in a shallow 3D field and
+drift toward the camera, parallax against the pointer and slide with the scroll.
+A slow aura of gold and green sits behind them. It replaces the old attractor
+backdrop and runs on every page.
+
+`Hero.astro` draws the Lorenz attractor at full viewport height as a glowing
+trail — one trajectory in a ring buffer, stroked as thirty tapering segments so
+the curve is drawn and fades at the tail at once. It turns slowly, re-fits itself
+to the box on resize, pauses when scrolled out of view, and takes its colours
+from `--petal` and `--text` so it flips with the theme.
+
+Body copy is Instrument Serif italic; headings, labels and controls stay in
+Archivo.
+
 ## Studio (writing)
 
 `/studio` is an unlisted authoring page — no nav entry, `noindex`, excluded from
@@ -106,6 +122,13 @@ a build and the post goes live in about a minute. `functions/api/posts.js` backs
 Drafts are kept in `localStorage` as well (save, reopen, delete), and
 "Download .md" writes the file for the plain git workflow — write locally,
 commit, push, same result.
+
+**Cards for new posts.** `npm run images` draws a card for every post from its
+frontmatter; `npm run images:missing` only draws the ones that don't exist yet.
+That second one runs automatically as `prebuild`, so any post added by hand and
+pushed gets a card at deploy time — and if the build image has no Python or
+Pillow, it exits quietly and the committed cards are used instead. A post with
+no card falls back to the site card.
 
 Run `npm run images` instead of exporting cards one by one if you'd rather let
 `scripts/generate-og.py` draw every post's card from its frontmatter.

@@ -2,8 +2,7 @@
 import { SITE } from '../site.config';
 
 /**
- * Header: compact wordmark, two destinations, and the day/night switch with a
- * sunflower knob.
+ * Header: compact wordmark and two destinations. Dark only — no switch.
  */
 const nav = [
   { label: 'work', href: '/work' },
@@ -20,60 +19,7 @@ const nav = [
     <nav class="nav" aria-label="Main">
       {nav.map((n) => <a href={n.href} data-split>{n.label}</a>)}
 
-      <button
-        class="theme"
-        id="theme"
-        type="button"
-        aria-label="Switch to light mode"
-        aria-pressed="false"
-        title="Day / night"
-      >
-        <span class="knob">
-          <svg class="petals" viewBox="0 0 24 24" aria-hidden="true">
-            {
-              Array.from({ length: 9 }).map((_, i) => (
-                <ellipse
-                  cx="12"
-                  cy="5.6"
-                  rx="2.3"
-                  ry="4.6"
-                  transform={`rotate(${i * 40} 12 12)`}
-                />
-              ))
-            }
-            <circle cx="12" cy="12" r="3.7" class="core" />
-          </svg>
-        </span>
-      </button>
     </nav>
   </div>
 </header>
 
-<script>
-  (() => {
-    const root = document.documentElement;
-    const btn = document.getElementById('theme');
-    if (!(btn instanceof HTMLButtonElement)) return;
-
-    const meta = document.querySelector('meta[name="theme-color"]');
-
-    const apply = (t: string) => {
-      root.dataset.theme = t;
-      const light = t === 'light';
-      btn.setAttribute('aria-pressed', String(light));
-      btn.setAttribute('aria-label', light ? 'Switch to night' : 'Switch to day');
-      if (meta) meta.setAttribute('content', light ? '#f2efe9' : '#000000');
-      try {
-        localStorage.setItem('rxwsxn-theme', t);
-      } catch {
-        /* private mode */
-      }
-    };
-
-    apply(root.dataset.theme === 'light' ? 'light' : 'dark');
-
-    btn.addEventListener('click', () => {
-      apply(root.dataset.theme === 'dark' ? 'light' : 'dark');
-    });
-  })();
-</script>

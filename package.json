@@ -10,7 +10,9 @@
     "preview": "astro preview",
     "images": "python3 scripts/generate-og.py",
     "og": "python3 scripts/generate-og.py",
-    "astro": "astro"
+    "astro": "astro",
+    "images:missing": "python3 scripts/generate-og.py --missing",
+    "prebuild": "npm run images:missing --silent || true"
   },
   "dependencies": {
     "@astrojs/mdx": "4.3.14",
